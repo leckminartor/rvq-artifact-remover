@@ -24,6 +24,16 @@ AI audio ──> 1. Comb-ripple flattener   (cancels codec frame-rate AM buzz)
         ──> 24-bit WAV
 ```
 
+## Screenshots
+
+**Analysis view** - spectrogram with detected frozen quantization-noise bins (cyan):
+
+![Analysis view](docs/images/analysis.png)
+
+**Before / after processing** (synthetic RVQ-damage benchmark):
+
+![Before / after](docs/images/before-after.png)
+
 ## Features
 
 - **Signal-adaptive by design** - every stage detects before it modifies;
