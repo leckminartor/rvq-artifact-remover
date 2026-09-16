@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rvq-artifact-remover"
+version = "0.1.0"
+description = "Remove neural-codec (RVQ) quantization artifacts from AI-generated music - comb suppression, frozen-noise unfreezing, transient restoration, optional Demucs neural stage"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "leckminartor" }]
+keywords = [
+    "audio", "ai-music", "rvq", "codec-artifacts", "audio-restoration",
+    "encodec", "soundstream", "demucs", "hi-fi",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: End Users/Desktop",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Multimedia :: Sound/Audio",
+    "Topic :: Multimedia :: Sound/Audio :: Analysis",
+]
+dependencies = [
+    "numpy>=1.26",
+    "scipy>=1.11",
+    "librosa>=0.10",
+    "soundfile>=0.12",
+    "matplotlib>=3.8",
+]
+
+[project.optional-dependencies]
+app = ["gradio>=4.0"]
+neural = ["torch>=2.0", "torchaudio>=2.0", "demucs>=4.0"]
+dev = ["pytest>=8"]
+
+[project.scripts]
+rvq-remover = "rvq_remover.cli:main"
+rvq-remover-app = "rvq_remover.app:launch"
+
+[project.urls]
+Homepage = "https://github.com/leckminartor/rvq-artifact-remover"
+Issues = "https://github.com/leckminartor/rvq-artifact-remover/issues"
+
+[tool.setuptools]
+packages = ["rvq_remover"]

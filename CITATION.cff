@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+title: RVQ Artifact Remover - offline removal of neural-codec quantization artifacts from AI-generated music
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - name: leckminartor
+version: 0.1.0
+date-released: "2026-09-16"
+license: MIT
+repository-code: "https://github.com/leckminartor/rvq-artifact-remover"
+abstract: >-
+  Offline deep-processing tool that removes the structured,
+  repeatable artifacts introduced by Residual Vector Quantization
+  (RVQ) in AI-generated music (EnCodec, SoundStream, DAC, X-Codec).
+  Comb-ripple flattening, frozen-noise unfreezing, transient
+  restoration, adaptive air-band roll-off and an optional Demucs
+  neural separation stage.
+keywords:
+  - audio
+  - audio-restoration
+  - ai-music
+  - rvq
+  - neural-codec
+  - demucs

@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.eggs/
+
+# Environments
+.venv/
+venv/
+env/
+
+# Test / tooling caches
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Project artifacts (never commit audio)
+output/
+*.wav
+*.mp3
+*.flac
+*.aiff
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
