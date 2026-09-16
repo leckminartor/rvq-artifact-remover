@@ -4,6 +4,7 @@
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/version-0.1.0-green.svg)](CHANGELOG.md)
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-FFDD00?style=flat&logo=buy-me-a-coffee&logoColor=black)](https://paypal.me/klausminator)
 
 **Offline removal of neural-codec (RVQ) quantization artifacts from AI-generated music.**
 
@@ -159,6 +160,13 @@ Run it yourself: `pytest tests/ -v`
 - [ ] Per-stem strength presets exposed in the UI
 - [ ] Additional artifact metrics (stereo-image stagnation, modulation noise)
 - [ ] Optional band extension model for restored HF content
+
+## Support
+
+If this tool saved your AI tracks, consider buying me a coffee - it keeps the
+updates coming:
+
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-support%20on%20PayPal-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://paypal.me/klausminator)
 
 ## Contributing
 
