@@ -3,7 +3,7 @@
 [![CI](https://github.com/leckminartor/rvq-artifact-remover/actions/workflows/ci.yml/badge.svg)](https://github.com/leckminartor/rvq-artifact-remover/actions/workflows/ci.yml)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.1.2-green.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.2.0-green.svg)](CHANGELOG.md)
 [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-FFDD00?style=flat&logo=buy-me-a-coffee&logoColor=black)](https://paypal.me/klausminator)
 
 **Offline removal of neural-codec (RVQ) quantization artifacts from AI-generated music.**
@@ -149,7 +149,9 @@ Run it yourself: `pytest tests/ -v`
 
 ## Known limitations
 
-- Offline processing - roughly realtime on a modern GPU, slower on CPU.
+- Offline processing: roughly 36 s for a 2-minute stereo track including the
+  AI neural stage on an RTX 3060 (~4 min before v0.2.0); CPU-only machines
+  are slower for the neural separation step.
 - Extreme strength settings can dull the top end; use the before/after report.
 - Frame-rate detection assumes a constant codec rate per file (true for all
   common AI music generators).

@@ -7,6 +7,7 @@ removes what remains with less collateral damage than mix-level processing.
 """
 
 import os
+from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
 
@@ -56,10 +57,24 @@ def _separate(y, sr, model_name, device):
         y44 = np.repeat(y44, 2, axis=0)
 
     wav = torch.from_numpy(np.ascontiguousarray(y44.astype(np.float32)))[None]
-    with torch.no_grad():
-        src = apply_model(model, wav, device=device, shifts=0,
-                          overlap=0.25, split=True, progress=False)[0]
-    src = src.cpu().numpy()
+    use_half = str(device).startswith("cuda")
+    if use_half:
+        try:
+            model = model.half()
+        except Exception:
+            use_half = False
+
+    def infer(inp):
+        with torch.no_grad():
+            return apply_model(model, inp, device=device, shifts=0,
+                               overlap=0.25, split=True, progress=False)[0]
+
+    try:
+        src = infer(wav.half() if use_half else wav)
+    except Exception:
+        model = model.float()
+        src = infer(wav)
+    src = src.float().cpu().numpy()
 
     n_orig = y.shape[1]
     stems = {}
@@ -75,7 +90,8 @@ def _separate(y, sr, model_name, device):
 def neural_enhance(y, sr, strength=0.6, hf_start=4000.0, comb_freq=75.0,
                    model_name="htdemucs", device=None, use_transient=None,
                    stem_strength=0.8, use_comb=True, use_bandlimit=True,
-                   status_cb=None, cancel_check=None):
+                   status_cb=None, cancel_check=None, comb_score=None,
+                   parallel_stems=True):
     engine._check_cancel(cancel_check)
     if device is None:
         import torch
@@ -86,15 +102,16 @@ def neural_enhance(y, sr, strength=0.6, hf_start=4000.0, comb_freq=75.0,
     stems = _separate(y, sr, model_name, device)
     engine._check_cancel(cancel_check)
 
-    out = np.zeros_like(y)
-    for name, st in stems.items():
+    names = list(stems.keys())
+
+    def clean_one(name):
         engine._check_cancel(cancel_check)
         cfg = STEM_CFG.get(name, STEM_CFG["other"])
         if status_cb:
             status_cb(f"Cleaning stem: {name}...")
         hfs = hf_start * cfg["hf_start_scale"]
         cleaned, _ = engine.process(
-            st, sr,
+            stems[name], sr,
             strength=float(np.clip(strength * stem_strength, 0.0, 1.0)),
             hf_start=hfs, comb_freq=comb_freq,
             use_comb=use_comb and cfg["comb"],
@@ -102,7 +119,20 @@ def neural_enhance(y, sr, strength=0.6, hf_start=4000.0, comb_freq=75.0,
             use_transient=cfg["transient"] if use_transient is None else use_transient,
             use_bandlimit=use_bandlimit and cfg["bandlimit"],
             cancel_check=cancel_check,
+            compute_metrics=False,
+            parallel_channels=False,
+            comb_score=comb_score,
         )
+        return cleaned
+
+    if parallel_stems and len(names) > 1:
+        with ThreadPoolExecutor(max_workers=min(4, len(names))) as ex:
+            cleaned_list = list(ex.map(clean_one, names))
+    else:
+        cleaned_list = [clean_one(n) for n in names]
+
+    out = np.zeros_like(y)
+    for cleaned in cleaned_list:
         out += cleaned
 
     out = out[:, :y.shape[1]]

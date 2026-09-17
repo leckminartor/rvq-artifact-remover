@@ -130,6 +130,7 @@ def run_processing(path, strength, hf_start, comb_freq, neural_on, model_name,
                 use_transient=bool(use_transient),
                 use_bandlimit=bool(use_bandlimit),
                 cancel_check=lambda: _RUN["cancel"],
+                status_cb=lambda m: holder.update(status="DSP - " + m),
             )
             holder["rep"] = rep
             if neural_on:
@@ -140,8 +141,9 @@ def run_processing(path, strength, hf_start, comb_freq, neural_on, model_name,
                     hf_start=float(hf_start),
                     comb_freq=float(comb_freq),
                     model_name=model_name,
-                    status_cb=lambda m: holder.update(status=m),
+                    status_cb=lambda m: holder.update(status="AI - " + m),
                     cancel_check=lambda: _RUN["cancel"],
+                    comb_score=rep["before"]["comb_score"],
                 )
             else:
                 holder["y"] = y_out
@@ -156,10 +158,8 @@ def run_processing(path, strength, hf_start, comb_freq, neural_on, model_name,
         if _RUN["cancel"]:
             yield None, None, "Cancelling - waiting for the current stage to finish...", *buttons_off
         else:
-            status = holder["status"] or ""
-            msg = "AI neural stage: " + status if status else "Processing..."
-            yield None, None, msg, *buttons_off
-        time.sleep(1.0)
+            yield None, None, holder["status"] or "Processing...", *buttons_off
+        time.sleep(0.5)
     thread.join()
 
     from .engine import Cancelled
@@ -180,8 +180,11 @@ def run_processing(path, strength, hf_start, comb_freq, neural_on, model_name,
     _spectrogram_ax(axes[1], y_out.mean(axis=0), sr, "After (RVQ cleaned)")
     fig.tight_layout()
 
-    rep_final, _ = analyze(y_out, sr, hf_start=float(hf_start),
-                           comb_freq=float(comb_freq))
+    if neural_on:
+        rep_final, _ = analyze(y_out, sr, hf_start=float(hf_start),
+                               comb_freq=float(comb_freq))
+    else:
+        rep_final = holder["rep"]["after"]
     b, a = holder["rep"]["before"], rep_final
     neural_note = f" (incl. AI stage: {model_name})" if neural_on else ""
     report = (

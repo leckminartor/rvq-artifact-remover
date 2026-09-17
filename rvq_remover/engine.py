@@ -16,6 +16,8 @@ residuals (EnCodec / SoundStream / DAC style RVQ artifacts):
    musical energy edge where RVQ noise dominates but content does not.
 """
 
+from concurrent.futures import ThreadPoolExecutor
+
 import numpy as np
 import librosa
 import soundfile as sf
@@ -48,11 +50,27 @@ def save_audio(path, y, sr):
     return path
 
 
-def _band_envelope(x, sr, hf_start):
-    sos = sps.butter(4, hf_start, btype="highpass", fs=sr, output="sos")
-    xh = sps.sosfilt(sos, x)
-    env = np.abs(sps.hilbert(xh))
-    return xh, env
+ENV_DECIM = 8
+
+
+def _band_env(band, sr, decim=ENV_DECIM, cutoff=240.0):
+    """Cheap AM envelope (rectify + low-pass + decimate).
+
+    ~10x faster than a Hilbert transform at full rate; envelope detail up to
+    ~240 Hz is preserved, which covers all codec frame rates (12.5-125 Hz).
+    Returns the envelope and its sample rate.
+    """
+    fs_d = sr / float(decim)
+    anti = sps.butter(2, min(fs_d * 0.45, sr * 0.45), btype="lowpass",
+                      fs=sr, output="sos")
+    a = sps.sosfilt(anti, np.abs(band))
+    n = (len(a) // decim) * decim
+    if n < decim * 2:
+        return np.zeros(2), fs_d
+    a_d = a[:n].reshape(-1, decim).mean(axis=1)
+    lp = sps.butter(4, cutoff, btype="lowpass", fs=fs_d, output="sos")
+    env = sps.sosfiltfilt(lp, a_d)
+    return np.maximum(env, 0.0), fs_d
 
 
 def _coherent_line(env, sr, f0):
@@ -93,8 +111,8 @@ def _band_comb_depths(x, sr, hf_start, ripple_hz):
     for lo, hi in edges:
         sos = sps.butter(4, [lo, hi], btype="bandpass", fs=sr, output="sos")
         b = sps.sosfilt(sos, x)
-        env = np.abs(sps.hilbert(b))
-        line = _coherent_line(env, sr, ripple_hz)
+        env, fs_d = _band_env(b, sr)
+        line = _coherent_line(env, fs_d, ripple_hz)
         depths.append(line / (float(np.median(env)) + EPS))
     return depths, edges
 
@@ -123,11 +141,12 @@ def detect_comb_freq(y, sr, hf_start=4000.0, fmin=10.0, fmax=125.0,
     for lo, hi in edges:
         sos = sps.butter(4, [lo, hi], btype="bandpass", fs=sr, output="sos")
         band = sps.sosfilt(sos, mono)
-        env = np.abs(sps.hilbert(band))
-        meds.append(float(np.median(env)) + EPS)
-        envs.append(env[::8] - np.median(env))
+        env, fs_env = _band_env(band, sr)
+        med = float(np.median(env))
+        meds.append(med + EPS)
+        envs.append(env - med)
     n = envs[0].size
-    fs_env = sr / 8.0
+    fs_env = sr / float(ENV_DECIM)
     med_max = max(meds) if meds else 0.0
     rms_floor = 1e-4 * float(np.sqrt(np.mean(mono ** 2))) + EPS
     pairs = [(med, np.fft.rfft(e)) for med, e in zip(meds, envs)
@@ -159,8 +178,6 @@ def detect_comb_freq(y, sr, hf_start=4000.0, fmin=10.0, fmax=125.0,
         proms[i] = max(0.0, d_arr[i] - base)
     order = np.argsort(-proms)
     return [(float(fs_arr[i]), float(d_arr[i])) for i in order]
-    results.sort(key=lambda r: -r[1])
-    return results
 
 
 def analyze(y, sr, n_fft=4096, hop=1024, hf_start=4000.0, comb_freq=75.0):
@@ -216,15 +233,20 @@ def comb_notch(x, sr, hf_start, ripple_hz, strength, cancel_check=None):
         _check_cancel(cancel_check)
         sos = sps.butter(4, [lo, hi], btype="bandpass", fs=sr, output="sos")
         band = sps.sosfilt(sos, xh)
-        env = np.abs(sps.hilbert(band))
+        env, fs_d = _band_env(band, sr)
+        if env.size < 8:
+            out_hf += band
+            continue
         ripple = sps.sosfiltfilt(
             sps.butter(3, [ripple_hz * 0.8, ripple_hz * 1.2], btype="bandpass",
-                       fs=sr, output="sos"), env)
+                       fs=fs_d, output="sos"), env)
         g = 1.0 - k * (ripple / np.maximum(env, EPS))
         g = np.clip(g, 0.25, 2.5)
         g = sps.sosfiltfilt(
-            sps.butter(2, ripple_hz * 2.0, btype="lowpass", fs=sr, output="sos"), g)
-        out_hf += band * g
+            sps.butter(2, ripple_hz * 2.0, btype="lowpass", fs=fs_d, output="sos"), g)
+        g_full = np.interp(np.arange(len(band)),
+                           np.arange(len(g)) * ENV_DECIM, g)
+        out_hf += band * g_full
     return xl + out_hf
 
 
@@ -258,11 +280,11 @@ def transient_boost(S, mag_orig, freqs, hf_start, strength):
     hf = freqs >= hf_start * 0.7
     if not hf.any() or S.shape[1] < 8:
         return S
-    P = librosa.decompose.hpss(mag_orig, kernel_size=31)[1]
-    flux = np.maximum(0.0, np.diff(P[hf], axis=1)).sum(axis=0)
-    env = ndimage.gaussian_filter1d(flux, 2)
-    ref = np.percentile(env, 95) + EPS
-    env_n = np.clip(env / ref, 0.0, 1.0)
+    flux = np.maximum(0.0, np.diff(mag_orig[hf], axis=1)).sum(axis=0)
+    base = ndimage.gaussian_filter1d(flux, 16)
+    trans = np.maximum(0.0, flux - base)
+    ref = np.percentile(trans, 95) + EPS
+    env_n = np.clip(trans / ref, 0.0, 1.0)
     gain = 1.0 + 0.25 * strength * env_n
     S2 = S.copy()
     S2[hf, 1:] *= gain[None, :]
@@ -276,34 +298,80 @@ def bandlimit(S, freqs, f_edge, strength, max_db=6.0):
     return S * mask[:, None]
 
 
-def process(y, sr, strength=0.6, hf_start=4000.0, comb_freq=75.0,
-            use_comb=True, use_unfreeze=True, use_transient=True,
-            use_bandlimit=True, cancel_check=None):
-    _check_cancel(cancel_check)
-    strength = float(np.clip(strength, 0.0, 1.0))
-    metrics_in, _ = analyze(y, sr, hf_start=hf_start, comb_freq=comb_freq)
+def _energy_edge(y, sr, n_fft=4096, hop=1024):
+    mono = y if y.ndim == 1 else y.mean(axis=0)
+    S = np.abs(librosa.stft(mono, n_fft=n_fft, hop_length=hop, window="hann"))
+    freqs = librosa.fft_frequencies(sr=sr, n_fft=n_fft)
+    med = np.median(S, axis=1)
+    cum = np.cumsum(med) / (np.sum(med) + EPS)
+    idx = int(np.searchsorted(cum, 0.995))
+    return float(freqs[min(idx, len(freqs) - 1)])
+
+
+def _process_channel(x, sr, strength, hf_start, comb_freq, do_comb,
+                     use_unfreeze, use_transient, f_edge, use_bandlimit,
+                     cancel_check, status_cb, label):
     n_fft = 4096
     hop = 1024
     freqs = librosa.fft_frequencies(sr=sr, n_fft=n_fft)
-    out = np.zeros_like(y)
-    for c in range(y.shape[0]):
-        x = y[c]
-        _check_cancel(cancel_check)
-        if use_comb and metrics_in["comb_score"] > 0.03:
-            x = comb_notch(x, sr, hf_start, comb_freq, strength, cancel_check)
-        _check_cancel(cancel_check)
-        S = librosa.stft(x, n_fft=n_fft, hop_length=hop, window="hann")
-        mag0 = np.abs(S)
-        if use_unfreeze:
-            S = unfreeze_frozen(S, freqs, strength, hf_start, hop=hop, n_fft=n_fft)
-        _check_cancel(cancel_check)
-        if use_transient:
-            S = transient_boost(S, mag0, freqs, hf_start, strength)
-        if use_bandlimit and metrics_in["energy_edge_hz"] < 0.8 * sr / 2.0:
-            S = bandlimit(S, freqs, metrics_in["energy_edge_hz"], strength)
-        out[c] = librosa.istft(S, hop_length=hop, window="hann", length=len(x))
+    _check_cancel(cancel_check)
+    if status_cb:
+        status_cb(f"{label}: comb stage")
+    if do_comb:
+        x = comb_notch(x, sr, hf_start, comb_freq, strength, cancel_check)
+    _check_cancel(cancel_check)
+    if status_cb:
+        status_cb(f"{label}: spectral cleanup")
+    S = librosa.stft(x, n_fft=n_fft, hop_length=hop, window="hann")
+    mag0 = np.abs(S)
+    if use_unfreeze:
+        S = unfreeze_frozen(S, freqs, strength, hf_start, hop=hop, n_fft=n_fft)
+    _check_cancel(cancel_check)
+    if use_transient:
+        S = transient_boost(S, mag0, freqs, hf_start, strength)
+    if use_bandlimit and f_edge is not None and f_edge < 0.8 * sr / 2.0:
+        S = bandlimit(S, freqs, f_edge, strength)
+    return librosa.istft(S, hop_length=hop, window="hann", length=len(x))
+
+
+def process(y, sr, strength=0.6, hf_start=4000.0, comb_freq=75.0,
+            use_comb=True, use_unfreeze=True, use_transient=True,
+            use_bandlimit=True, cancel_check=None, compute_metrics=True,
+            parallel_channels=True, status_cb=None, comb_score=None):
+    _check_cancel(cancel_check)
+    strength = float(np.clip(strength, 0.0, 1.0))
+    metrics_in = None
+    f_edge = None
+    if compute_metrics:
+        metrics_in, _ = analyze(y, sr, hf_start=hf_start, comb_freq=comb_freq)
+        comb_score = metrics_in["comb_score"]
+        f_edge = metrics_in["energy_edge_hz"]
+    do_comb = bool(use_comb and (comb_score is None or comb_score > 0.03))
+    if use_bandlimit and f_edge is None:
+        f_edge = _energy_edge(y, sr)
+
+    if status_cb:
+        status_cb("DSP stages (comb, unfreeze, transient, bandlimit)")
+
+    channels = [y[c] for c in range(y.shape[0])]
+    n_ch = len(channels)
+    args = (sr, strength, hf_start, comb_freq, do_comb, use_unfreeze,
+            use_transient, f_edge, use_bandlimit, cancel_check)
+
+    if parallel_channels and n_ch > 1 and y.shape[1] > sr // 2:
+        with ThreadPoolExecutor(max_workers=min(2, n_ch)) as ex:
+            outs = list(ex.map(
+                lambda p: _process_channel(p[1], *args, status_cb,
+                                           f"channel {p[0] + 1}/{n_ch}"),
+                enumerate(channels)))
+    else:
+        outs = [_process_channel(ch, *args, status_cb, f"channel {i + 1}/{n_ch}")
+                for i, ch in enumerate(channels)]
+    out = np.stack(outs)
 
     _check_cancel(cancel_check)
+    if status_cb:
+        status_cb("finalising levels")
     rms_in = np.sqrt(np.mean(y ** 2)) + EPS
     rms_out = np.sqrt(np.mean(out ** 2)) + EPS
     out *= float(np.clip(rms_in / rms_out, 0.5, 2.0))
@@ -311,5 +379,8 @@ def process(y, sr, strength=0.6, hf_start=4000.0, comb_freq=75.0,
     if peak > 0.999:
         out *= 0.999 / peak
 
-    metrics_out, _ = analyze(out, sr, hf_start=hf_start, comb_freq=comb_freq)
-    return out, {"before": metrics_in, "after": metrics_out}
+    rep = None
+    if compute_metrics:
+        metrics_out, _ = analyze(out, sr, hf_start=hf_start, comb_freq=comb_freq)
+        rep = {"before": metrics_in, "after": metrics_out}
+    return out, rep

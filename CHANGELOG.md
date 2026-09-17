@@ -5,6 +5,33 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-09-17
+
+### Changed
+
+- Major performance optimisation - measured on a 2-minute stereo track
+  (RTX 3060): full DSP + AI neural stage now takes ~36 s instead of ~4 min.
+  - Envelope extraction for the comb stage, analysis and frame-rate
+    detection now uses a decimated rectify + low-pass envelope instead of a
+    full-rate Hilbert transform (~10x faster per band, same detection
+    quality).
+  - Transient restoration now uses spectral-flux transient detection
+    instead of the much more expensive HPSS decomposition.
+  - The AI neural stage processes the four stems in parallel and no longer
+    recomputes full analysis metrics per stem.
+  - Stereo channels are processed in parallel.
+  - Demucs runs in FP16 on CUDA GPUs, with automatic fallback to FP32.
+
+### Added
+
+- Live stage progress in the app ("DSP - channel 1/2: comb stage",
+  "AI - Cleaning stem: drums...") instead of a static status line.
+- Cancel now also interrupts the DSP stages, not only the neural stage.
+
+### Removed
+
+- Dead code in the frame-rate detector.
+
 ## [0.1.2] - 2026-09-17
 
 ### Fixed
