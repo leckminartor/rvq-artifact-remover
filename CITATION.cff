@@ -1,4 +1,4 @@
-﻿cff-version: 1.2.0
+cff-version: 1.2.0
 title: RVQ Artifact Remover - offline removal of neural-codec quantization artifacts from AI-generated music
 message: >-
   If you use this software, please cite it using the
