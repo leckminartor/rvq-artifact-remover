@@ -193,7 +193,6 @@ def build():
     with gr.Blocks(title=f"{TITLE} v{__version__}") as demo:
         gr.Markdown(
             f"# {TITLE} v{__version__}\n"
-            f"### by {AUTHOR}\n"
             f"{SUBTITLE}"
         )
         with gr.Row():
