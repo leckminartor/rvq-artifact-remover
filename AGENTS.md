@@ -64,6 +64,9 @@
 
 ## Aktueller Status
 - v0.3.0 implementiert, alle 5 Tests grün, committet/gepusht/tagged.
+- **GitHub Release v0.3.0 veröffentlicht** ("De-hall / de-metal release",
+  Notes aus docs/release-notes-v0.3.0.md, als Latest markiert) – Stand 17.09.
+- Session-Ende 17.09.: v0.3.0 komplett abgeschlossen (Code, Doku, Tag, Release).
 
 ## Offene Themen / Roadmap (aus README)
 1. Real-time-Modus für DSP-Stufen.
