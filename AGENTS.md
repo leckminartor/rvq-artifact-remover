@@ -2,6 +2,10 @@
 
 > Diese Datei dient als langlebiger Speicher für AI-Sessions.
 > Bei vollen Kontextfenstern: Diese Datei lesen, dann weiterarbeiten.
+> **Wissensdatenbank mit Details (FAQ, Entscheidungen, Bugs, Chat-Rohverlauf):**
+> `docs/knowledge/` – Volltextsuche mit `rg -i "begriff" docs/knowledge/` oder
+> `Select-String -Path docs\knowledge\*.md -Pattern "begriff"`. Bei Detailfragen
+> zuerst dort nachschlagen, bevor die 12-MB-Session-JSON geparst wird.
 
 ## Projekt
 - **Name:** RVQ Artifact Remover v0.3.0
