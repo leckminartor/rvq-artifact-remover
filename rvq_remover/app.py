@@ -103,7 +103,8 @@ def run_analysis(path, hf_start):
 
 
 def run_processing(path, strength, hf_start, comb_freq, neural_on, model_name,
-                   use_comb, use_unfreeze, use_transient, use_bandlimit):
+                   residual_pct, use_comb, use_unfreeze, use_transient,
+                   use_bandlimit, use_echo_guard, use_demi):
     buttons_off = (gr.update(interactive=False), gr.update(interactive=False),
                    gr.update(interactive=True))
     buttons_on = (gr.update(interactive=True), gr.update(interactive=True),
@@ -129,6 +130,8 @@ def run_processing(path, strength, hf_start, comb_freq, neural_on, model_name,
                 use_unfreeze=bool(use_unfreeze),
                 use_transient=bool(use_transient),
                 use_bandlimit=bool(use_bandlimit),
+                use_echo_guard=bool(use_echo_guard),
+                use_demi=bool(use_demi),
                 cancel_check=lambda: _RUN["cancel"],
                 status_cb=lambda m: holder.update(status="DSP - " + m),
             )
@@ -141,6 +144,7 @@ def run_processing(path, strength, hf_start, comb_freq, neural_on, model_name,
                     hf_start=float(hf_start),
                     comb_freq=float(comb_freq),
                     model_name=model_name,
+                    residual_keep=float(residual_pct) / 100.0,
                     status_cb=lambda m: holder.update(status="AI - " + m),
                     cancel_check=lambda: _RUN["cancel"],
                     comb_score=rep["before"]["comb_score"],
@@ -218,9 +222,11 @@ def build():
                                      label="Artifact band start (Hz)")
                 comb_freq = gr.Number(value=75.0, precision=1,
                                       label="Codec frame rate (Hz) - 75 = EnCodec, 50 = many SoundStream")
-                use_comb = gr.Checkbox(value=True, label="Comb-ripple flattener (frame-rate AM)")
+                use_comb = gr.Checkbox(value=True, label="Comb-ripple flattener (frame-rate AM + harmonics)")
                 use_unfreeze = gr.Checkbox(value=True, label="Frozen-noise unfreezer + dither")
+                use_echo_guard = gr.Checkbox(value=True, label="Pre-echo guard (ghost echo before hits)")
                 use_transient = gr.Checkbox(value=True, label="Transient restoration")
+                use_demi = gr.Checkbox(value=True, label="De-metal: adaptive spectral gate (music-following noise)")
                 use_bandlimit = gr.Checkbox(value=True, label="Adaptive air-band roll-off")
                 gr.Markdown(
                     "**AI neural stage** (Demucs separation + per-stem "
@@ -234,6 +240,9 @@ def build():
                     value="htdemucs",
                     label="Model - htdemucs = faster, htdemucs_ft = best quality",
                 )
+                residual_pct = gr.Slider(0, 100, value=30, step=5,
+                                         label="Demucs residual retention (%) - "
+                                               "keeps room/pads, tames metallic HF")
                 btn_analyze = gr.Button("Analyze artifacts", variant="secondary")
                 gr.Markdown("*Analyze is optional and purely informational - "
                             "processing performs its own internal analysis.*")
@@ -251,9 +260,9 @@ def build():
                           outputs=[analysis_plot, analysis_report, comb_freq])
         btn_process.click(run_processing,
                           inputs=[audio_in, strength, hf_start, comb_freq,
-                                  neural_on, model_name,
+                                  neural_on, model_name, residual_pct,
                                   use_comb, use_unfreeze, use_transient,
-                                  use_bandlimit],
+                                  use_bandlimit, use_echo_guard, use_demi],
                           outputs=[audio_out, compare_plot, process_report,
                                    btn_process, btn_analyze, btn_cancel])
         btn_cancel.click(cancel_run, outputs=[process_report])

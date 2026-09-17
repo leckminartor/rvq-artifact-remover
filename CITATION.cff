@@ -6,7 +6,7 @@ message: >-
 type: software
 authors:
   - name: leckminartor
-version: 0.2.0
+version: 0.3.0
 date-released: "2026-09-17"
 license: MIT
 repository-code: "https://github.com/leckminartor/rvq-artifact-remover"
@@ -14,9 +14,11 @@ abstract: >-
   Offline deep-processing tool that removes the structured,
   repeatable artifacts introduced by Residual Vector Quantization
   (RVQ) in AI-generated music (EnCodec, SoundStream, DAC, X-Codec).
-  Comb-ripple flattening, frozen-noise unfreezing, transient
-  restoration, adaptive air-band roll-off and an optional Demucs
-  neural separation stage.
+  Comb-ripple flattening with harmonic notching, frozen-noise
+  unfreezing, pre/post-echo guarding, a de-metal adaptive spectral
+  gate against music-following codec noise, transient restoration,
+  adaptive air-band roll-off and an optional Demucs neural separation
+  stage with residual cancellation.
 keywords:
   - audio
   - audio-restoration

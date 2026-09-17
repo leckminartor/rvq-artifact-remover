@@ -4,6 +4,9 @@ htdemucs re-synthesizes each stem through a network trained on clean studio
 recordings. Codec residual noise that belongs to no instrument largely
 disappears when stems are recombined; per-stem targeted DSP cleanup then
 removes what remains with less collateral damage than mix-level processing.
+The mix-minus-stems residual (hall / metallic artifact share) is tamed and
+partially retained instead of being discarded outright, so room and pad
+content survive while its metallic HF is rolled off.
 """
 
 import os
@@ -87,11 +90,26 @@ def _separate(y, sr, model_name, device):
     return stems
 
 
+def _tame_residual(res, sr, hf_start, strength, cancel_check=None):
+    """Roll off the metallic HF of the mix-minus-stems residual."""
+    import librosa
+    n_fft, hop = 4096, 1024
+    freqs = librosa.fft_frequencies(sr=sr, n_fft=n_fft)
+    outs = []
+    for ch in res:
+        engine._check_cancel(cancel_check)
+        S = librosa.stft(ch, n_fft=n_fft, hop_length=hop, window="hann")
+        S = engine.bandlimit(S, freqs, hf_start * 1.8, min(1.0, strength))
+        outs.append(librosa.istft(S, hop_length=hop, window="hann",
+                                  length=len(ch)))
+    return np.stack(outs)
+
+
 def neural_enhance(y, sr, strength=0.6, hf_start=4000.0, comb_freq=75.0,
                    model_name="htdemucs", device=None, use_transient=None,
                    stem_strength=0.8, use_comb=True, use_bandlimit=True,
-                   status_cb=None, cancel_check=None, comb_score=None,
-                   parallel_stems=True):
+                   residual_keep=0.3, status_cb=None, cancel_check=None,
+                   comb_score=None, parallel_stems=True):
     engine._check_cancel(cancel_check)
     if device is None:
         import torch
@@ -134,6 +152,14 @@ def neural_enhance(y, sr, strength=0.6, hf_start=4000.0, comb_freq=75.0,
     out = np.zeros_like(y)
     for cleaned in cleaned_list:
         out += cleaned
+
+    keep = float(np.clip(residual_keep, 0.0, 1.0)) * (1.0 - 0.5 * strength)
+    if keep > 0.01:
+        if status_cb:
+            status_cb("Taming Demucs residual (hall / artifact share)...")
+        residual = y - sum(stems.values())
+        out += keep * _tame_residual(residual, sr, hf_start, strength,
+                                     cancel_check)
 
     out = out[:, :y.shape[1]]
     rms_in = np.sqrt(np.mean(y ** 2)) + engine.EPS

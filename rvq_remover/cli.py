@@ -18,6 +18,11 @@ def main():
     ap.add_argument("--no-unfreeze", action="store_true")
     ap.add_argument("--no-transient", action="store_true")
     ap.add_argument("--no-bandlimit", action="store_true")
+    ap.add_argument("--no-echo-guard", action="store_true")
+    ap.add_argument("--no-demi", action="store_true",
+                    help="disable the de-metal adaptive spectral gate")
+    ap.add_argument("--residual-keep", type=float, default=0.3,
+                    help="Demucs residual retention 0..1 (default 0.3)")
     ap.add_argument("--neural", action="store_true",
                     help="AI neural stage (Demucs separation + per-stem cleanup)")
     ap.add_argument("--model", default="htdemucs", choices=["htdemucs", "htdemucs_ft"])
@@ -30,12 +35,14 @@ def main():
         comb_freq=args.comb_freq,
         use_comb=not args.no_comb, use_unfreeze=not args.no_unfreeze,
         use_transient=not args.no_transient, use_bandlimit=not args.no_bandlimit,
+        use_echo_guard=not args.no_echo_guard, use_demi=not args.no_demi,
     )
     if args.neural:
         from . import neural
         y_out = neural.neural_enhance(
             y_out, sr, strength=args.strength, hf_start=args.hf_start,
             comb_freq=args.comb_freq, model_name=args.model,
+            residual_keep=args.residual_keep,
             status_cb=lambda m: print(f"  [neural] {m}"),
         )
     save_audio(out, y_out, sr)

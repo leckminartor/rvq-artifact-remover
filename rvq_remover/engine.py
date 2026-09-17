@@ -4,15 +4,20 @@ Offline deep-processing pipeline targeting neural-codec quantization
 residuals (EnCodec / SoundStream / DAC style RVQ artifacts):
 
 1. HF envelope-ripple flattener  - removes codec frame-rate AM comb
-   structure (e.g. 75 Hz for EnCodec) from high-band envelopes using a
-   Hilbert-transform envelope at full time resolution.
+   structure (e.g. 75 Hz for EnCodec, including its 2x/3x harmonics) from
+   high-band envelopes using a decimated rectify envelope.
 2. Frozen-noise "unfreezer"      - detects temporally static spectral bins
    (quantization noise frozen across frames, measured with a transient-
    trimmed robust std) and attenuates them while re-injecting TPDF dither
    with independent phase to re-naturalize the noise floor.
-3. Transient restoration         - re-applies percussive gain lost to
+3. Pre-echo guard                - suppresses codec window-leakage ghost
+   echo in quiet frames before sharp transients.
+4. Transient restoration         - re-applies percussive gain lost to
    codec smearing.
-4. Adaptive bandlimit            - gentle roll-off above the detected
+5. De-metal adaptive gate        - attenuates music-following codec noise
+   (metallic sheen / thin artificial hall) via minimum-statistics noise
+   estimation and smoothed Wiener-style gating; sustained tones protected.
+6. Adaptive bandlimit            - gentle roll-off above the detected
    musical energy edge where RVQ noise dominates but content does not.
 """
 
@@ -220,7 +225,8 @@ def analyze(y, sr, n_fft=4096, hop=1024, hf_start=4000.0, comb_freq=75.0):
     return metrics, aux
 
 
-def comb_notch(x, sr, hf_start, ripple_hz, strength, cancel_check=None):
+def comb_notch(x, sr, hf_start, ripple_hz, strength, cancel_check=None,
+               harmonics=(1.0, 2.0, 3.0)):
     k = float(np.clip(strength, 0.0, 1.0))
     edges = _log_band_edges(hf_start, sr)
     if not edges:
@@ -237,13 +243,19 @@ def comb_notch(x, sr, hf_start, ripple_hz, strength, cancel_check=None):
         if env.size < 8:
             out_hf += band
             continue
-        ripple = sps.sosfiltfilt(
-            sps.butter(3, [ripple_hz * 0.8, ripple_hz * 1.2], btype="bandpass",
-                       fs=fs_d, output="sos"), env)
-        g = 1.0 - k * (ripple / np.maximum(env, EPS))
+        g = np.ones_like(env)
+        for h in harmonics:
+            f_h = ripple_hz * h
+            if f_h * 1.25 >= 0.45 * fs_d:
+                continue
+            ripple = sps.sosfiltfilt(
+                sps.butter(3, [f_h * 0.8, f_h * 1.2], btype="bandpass",
+                           fs=fs_d, output="sos"), env)
+            g = g * (1.0 - (k / h) * (ripple / np.maximum(env, EPS)))
         g = np.clip(g, 0.25, 2.5)
+        smooth_cut = min(ripple_hz * 1.5 * max(harmonics), 0.45 * fs_d)
         g = sps.sosfiltfilt(
-            sps.butter(2, ripple_hz * 2.0, btype="lowpass", fs=fs_d, output="sos"), g)
+            sps.butter(2, smooth_cut, btype="lowpass", fs=fs_d, output="sos"), g)
         g_full = np.interp(np.arange(len(band)),
                            np.arange(len(g)) * ENV_DECIM, g)
         out_hf += band * g_full
@@ -291,6 +303,74 @@ def transient_boost(S, mag_orig, freqs, hf_start, strength):
     return S2
 
 
+def echo_guard(S, mag_ref, freqs, hf_start, strength, pre_frames=5):
+    """Suppress codec pre-echo (window leakage) before sharp transients.
+
+    RVQ codecs smear sharp hits across adjacent STFT frames; the leaked
+    energy in otherwise quiet frames before a hit is heard as a short
+    reverse-reverb ghost. Frames preceding detected flux peaks are
+    attenuated on the HF band while the hit frame itself stays untouched.
+    """
+    hf = freqs >= hf_start * 0.7
+    if not hf.any() or S.shape[1] < 3 * pre_frames + 8:
+        return S
+    flux = np.maximum(0.0, np.diff(mag_ref[hf], axis=1)).sum(axis=0)
+    flux = np.concatenate(([0.0], flux))
+    base = ndimage.gaussian_filter1d(flux, 16)
+    trans = np.maximum(0.0, flux - base)
+    ref = np.percentile(trans, 95) + EPS
+    env_n = np.clip(trans / ref, 0.0, 1.0)
+    n = S.shape[1]
+    att = np.zeros(n)
+    for d in range(1, pre_frames + 1):
+        a = 0.9 * strength * (1.0 - d / (pre_frames + 1.0)) * env_n
+        shifted = np.zeros(n)
+        shifted[:n - d] = a[d:]
+        att = np.maximum(att, shifted)
+    out = S.copy()
+    out[hf] = S[hf] * (1.0 - np.minimum(att, 0.6))[None, :]
+    return out
+
+
+def demi_gate(S, freqs, sr, strength, hf_start, hop=1024, n_fft=4096,
+              max_att_db=9.0):
+    """Adaptive spectral gate against music-following codec noise (de-metal).
+
+    Quantization noise that rides along with the music is not static (the
+    frozen-bin unfreezer misses it) and is heard as a metallic sheen or a
+    thin artificial hall. A per-bin noise power floor is estimated with
+    rolling minimum statistics; Wiener-style over-subtraction with
+    temporally smoothed gains attenuates the sheen, sustained tones are
+    protected by the phase-lag test and treated bins are re-naturalized
+    with TPDF dither at independent phase.
+    """
+    hf = freqs >= hf_start * 0.85
+    if not hf.any() or S.shape[1] < 16:
+        return S
+    mag = np.abs(S)
+    tone = _tone_likeness(S, hop, n_fft)
+    protect = tone >= 0.5
+    P = ndimage.gaussian_filter(mag[hf] ** 2, sigma=(1.0, 2.0))
+    win = max(8, int(round(0.6 * sr / hop)))
+    floor = ndimage.minimum_filter1d(P, size=win, axis=1, mode="nearest")
+    noise = 2.0 * floor
+    sub = noise / (P + EPS)
+    k = 0.9 * float(np.clip(strength, 0.0, 1.0))
+    att_depth = 10 ** (-(2.0 + (max_att_db - 2.0) * strength) / 20.0)
+    g = np.sqrt(np.clip(1.0 - k * sub, 0.0, 1.0))
+    g = np.clip(g, att_depth, 1.0)
+    g = ndimage.gaussian_filter(g, sigma=(1.5, 4.0))
+    g[protect[hf]] = 1.0
+    m = 1.0 - g
+    rng = np.random.default_rng(SEED)
+    tpdf = rng.uniform(-1, 1, size=m.shape) + rng.uniform(-1, 1, size=m.shape)
+    phase = rng.uniform(0.0, 2.0 * np.pi, size=m.shape)
+    dith = tpdf * mag[hf] * m * 0.35 * np.exp(1j * phase)
+    out = S.copy()
+    out[hf] = S[hf] * g + dith
+    return out
+
+
 def bandlimit(S, freqs, f_edge, strength, max_db=6.0):
     f1 = max(f_edge * 1.02, 1000.0)
     floor = 10 ** (-max_db * strength / 20.0)
@@ -309,8 +389,8 @@ def _energy_edge(y, sr, n_fft=4096, hop=1024):
 
 
 def _process_channel(x, sr, strength, hf_start, comb_freq, do_comb,
-                     use_unfreeze, use_transient, f_edge, use_bandlimit,
-                     cancel_check, status_cb, label):
+                     use_unfreeze, use_transient, use_echo_guard, use_demi,
+                     f_edge, use_bandlimit, cancel_check, status_cb, label):
     n_fft = 4096
     hop = 1024
     freqs = librosa.fft_frequencies(sr=sr, n_fft=n_fft)
@@ -327,8 +407,13 @@ def _process_channel(x, sr, strength, hf_start, comb_freq, do_comb,
     if use_unfreeze:
         S = unfreeze_frozen(S, freqs, strength, hf_start, hop=hop, n_fft=n_fft)
     _check_cancel(cancel_check)
+    if use_echo_guard:
+        S = echo_guard(S, mag0, freqs, hf_start, strength)
     if use_transient:
         S = transient_boost(S, mag0, freqs, hf_start, strength)
+    if use_demi:
+        S = demi_gate(S, freqs, sr, strength, hf_start, hop=hop, n_fft=n_fft)
+    _check_cancel(cancel_check)
     if use_bandlimit and f_edge is not None and f_edge < 0.8 * sr / 2.0:
         S = bandlimit(S, freqs, f_edge, strength)
     return librosa.istft(S, hop_length=hop, window="hann", length=len(x))
@@ -336,7 +421,8 @@ def _process_channel(x, sr, strength, hf_start, comb_freq, do_comb,
 
 def process(y, sr, strength=0.6, hf_start=4000.0, comb_freq=75.0,
             use_comb=True, use_unfreeze=True, use_transient=True,
-            use_bandlimit=True, cancel_check=None, compute_metrics=True,
+            use_bandlimit=True, use_echo_guard=True, use_demi=True,
+            cancel_check=None, compute_metrics=True,
             parallel_channels=True, status_cb=None, comb_score=None):
     _check_cancel(cancel_check)
     strength = float(np.clip(strength, 0.0, 1.0))
@@ -351,12 +437,14 @@ def process(y, sr, strength=0.6, hf_start=4000.0, comb_freq=75.0,
         f_edge = _energy_edge(y, sr)
 
     if status_cb:
-        status_cb("DSP stages (comb, unfreeze, transient, bandlimit)")
+        status_cb("DSP stages (comb, unfreeze, echo guard, transient, "
+                  "de-metal, bandlimit)")
 
     channels = [y[c] for c in range(y.shape[0])]
     n_ch = len(channels)
     args = (sr, strength, hf_start, comb_freq, do_comb, use_unfreeze,
-            use_transient, f_edge, use_bandlimit, cancel_check)
+            use_transient, use_echo_guard, use_demi, f_edge, use_bandlimit,
+            cancel_check)
 
     if parallel_channels and n_ch > 1 and y.shape[1] > sr // 2:
         with ThreadPoolExecutor(max_workers=min(2, n_ch)) as ex:

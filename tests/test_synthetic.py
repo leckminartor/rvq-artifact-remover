@@ -90,3 +90,50 @@ def test_detect_comb_freq():
     top_freq, top_depth = det[0]
     assert abs(top_freq - 75.0) <= 2.6, f"detected {top_freq} Hz instead of 75 Hz"
     assert top_depth > 0.05, f"comb depth too low: {top_depth}"
+
+
+def test_demi_gate_attenuates_noise_and_protects_tone():
+    from rvq_remover.engine import demi_gate
+
+    n_fft, hop = 4096, 1024
+    frames = 64
+    freqs = librosa.fft_frequencies(sr=SR, n_fft=n_fft)
+    hf = freqs >= 4000
+    rng = np.random.default_rng(3)
+
+    noise = 0.1 * rng.standard_normal(frames * hop + n_fft)
+    S_noise = librosa.stft(noise, n_fft=n_fft, hop_length=hop)[:, :frames]
+    S_noise[~hf, :] = 0.0
+    e0 = float(np.sum(np.abs(S_noise[hf]) ** 2))
+    S_g = demi_gate(S_noise, freqs, SR, 0.8, 4000.0, hop=hop, n_fft=n_fft)
+    e1 = float(np.sum(np.abs(S_g[hf]) ** 2))
+    assert e1 < 0.6 * e0, "de-metal gate did not attenuate the noise floor"
+
+    t = np.arange(frames * hop + n_fft) / SR
+    tone = 0.2 * np.sin(2 * np.pi * 5000.0 * t)
+    S_tone = librosa.stft(tone, n_fft=n_fft, hop_length=hop)[:, :frames]
+    et0 = float(np.sum(np.abs(S_tone[hf]) ** 2))
+    S_t = demi_gate(S_tone, freqs, SR, 0.8, 4000.0, hop=hop, n_fft=n_fft)
+    et1 = float(np.sum(np.abs(S_t[hf]) ** 2))
+    assert et1 > 0.85 * et0, "sustained tone was attenuated by the de-metal gate"
+
+
+def test_echo_guard_trims_leakage_and_keeps_hit():
+    from rvq_remover.engine import echo_guard
+
+    n_fft = 4096
+    frames = 64
+    freqs = librosa.fft_frequencies(sr=SR, n_fft=n_fft)
+    hf_idx = np.where(freqs >= 4000)[0]
+    rng = np.random.default_rng(5)
+    spec = np.zeros((len(freqs), frames), dtype=complex)
+    spec[hf_idx, 20:24] = 0.02 * rng.standard_normal((len(hf_idx), 4))
+    spec[hf_idx, 24] = rng.standard_normal(len(hf_idx))
+    mag = np.abs(spec)
+    S_g = echo_guard(spec, mag, freqs, 4000.0, 0.8)
+    e_leak_before = float(np.sum(np.abs(spec[hf_idx, 19:24]) ** 2))
+    e_leak_after = float(np.sum(np.abs(S_g[hf_idx, 19:24]) ** 2))
+    e_hit_before = float(np.sum(np.abs(spec[hf_idx, 24]) ** 2))
+    e_hit_after = float(np.sum(np.abs(S_g[hf_idx, 24]) ** 2))
+    assert e_leak_after < 0.8 * e_leak_before, "pre-echo leakage was not trimmed"
+    assert e_hit_after > 0.9 * e_hit_before, "transient frame was damaged"
