@@ -1,9 +1,9 @@
-# RVQ Artifact Remover
+﻿# RVQ Artifact Remover
 
 [![CI](https://github.com/leckminartor/rvq-artifact-remover/actions/workflows/ci.yml/badge.svg)](https://github.com/leckminartor/rvq-artifact-remover/actions/workflows/ci.yml)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.1.1-green.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.1.2-green.svg)](CHANGELOG.md)
 [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-FFDD00?style=flat&logo=buy-me-a-coffee&logoColor=black)](https://paypal.me/klausminator)
 
 **Offline removal of neural-codec (RVQ) quantization artifacts from AI-generated music.**
@@ -17,12 +17,12 @@ mastering problems**: EQ and compression can only mask them. This tool
 analyzes the artifact structure and removes it at the codec level.
 
 ```
-AI audio ──> 1. Comb-ripple flattener   (cancels codec frame-rate AM buzz)
+AI audio â”€â”€> 1. Comb-ripple flattener   (cancels codec frame-rate AM buzz)
              2. Frozen-noise unfreezer  (de-metalizes the static noise floor)
              3. Transient restoration   (restores drum punch)
              4. Adaptive air-band roll-off (tames contentless HF)
-        ──> [optional] 5. AI neural stage: Demucs separation + per-stem cleanup
-        ──> 24-bit WAV
+        â”€â”€> [optional] 5. AI neural stage: Demucs separation + per-stem cleanup
+        â”€â”€> 24-bit WAV
 ```
 
 ## Screenshots

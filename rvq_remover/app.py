@@ -255,10 +255,11 @@ def build():
                                    btn_process, btn_analyze, btn_cancel])
         btn_cancel.click(cancel_run, outputs=[process_report])
         gr.Markdown(
-            f"---\n"
-            f"v{__version__} · by **{AUTHOR}** · "
-            f"[GitHub]({GITHUB_URL}) · "
-            f"[☕ Support]({DONATE_URL})"
+            f"<div style=\"margin-top: 0px; padding-top: 6px; "
+            f"border-top: 1px solid var(--border-color-primary);\">"
+            f"v{__version__} · by <b>{AUTHOR}</b> · "
+            f"<a href=\"{GITHUB_URL}\">GitHub</a> · "
+            f"<a href=\"{DONATE_URL}\">☕ Support</a></div>"
         )
     return demo
 
