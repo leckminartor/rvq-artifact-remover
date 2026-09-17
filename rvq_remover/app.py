@@ -53,8 +53,9 @@ def _spectrogram_ax(ax, y_mono, sr, title):
 
 
 def run_analysis(path, hf_start):
+    comb_update = gr.update()
     if not path:
-        return None, "Upload an audio file first."
+        return None, "Upload an audio file first.", comb_update
     y, sr = load_audio(path)
     metrics, aux = analyze(y, sr, hf_start=float(hf_start))
     mono = y.mean(axis=0)
@@ -85,10 +86,20 @@ def run_analysis(path, hf_start):
     if det:
         top = ", ".join(f"{f:.1f} Hz (depth {d:.3f})" for f, d in det[:3])
         report += (
-            "\n\nDetected codec frame rate candidates:\n  " + top +
-            "\nSet 'Codec frame rate' to the strongest candidate before processing."
+            "\n\nDetected codec frame rate candidates:\n  " + top
         )
-    return fig, report
+        top_f, top_d = det[0]
+        if top_d >= 0.05:
+            comb_update = gr.update(value=float(top_f))
+            report += (
+                f"\n'Codec frame rate' automatically set to {top_f:.1f} Hz."
+            )
+        else:
+            report += (
+                "\nNo clear codec comb found - 'Codec frame rate' left "
+                "unchanged. Consider disabling the comb stage."
+            )
+    return fig, report, comb_update
 
 
 def run_processing(path, strength, hf_start, comb_freq, neural_on, model_name,
@@ -234,7 +245,7 @@ def build():
                 process_report = gr.Textbox(label="Processing report", lines=6)
 
         btn_analyze.click(run_analysis, inputs=[audio_in, hf_start],
-                          outputs=[analysis_plot, analysis_report])
+                          outputs=[analysis_plot, analysis_report, comb_freq])
         btn_process.click(run_processing,
                           inputs=[audio_in, strength, hf_start, comb_freq,
                                   neural_on, model_name,
