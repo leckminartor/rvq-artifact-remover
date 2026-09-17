@@ -5,6 +5,22 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] - 2026-09-17
+
+### Added
+
+- App header/footer now show the version and author credit
+  ("by Klaus Perner (DJ LECK)") plus GitHub and donation links.
+- App shows the detected neural-stage device ("CUDA - RTX 3060" / "CPU")
+  before processing.
+- "Analyze artifacts" now automatically applies the strongest detected
+  codec frame rate to the "Codec frame rate" setting (only when a clear
+  comb line is present; otherwise the user setting is preserved).
+
+### Fixed
+
+- Duplicate author line removed from the app header.
+
 ## [0.1.0] - 2026-09-16
 
 ### Added

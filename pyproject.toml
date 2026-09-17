@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rvq-artifact-remover"
-version = "0.1.0"
+version = "0.1.1"
 description = "Remove neural-codec (RVQ) quantization artifacts from AI-generated music - comb suppression, frozen-noise unfreezing, transient restoration, optional Demucs neural stage"
 readme = "README.md"
 requires-python = ">=3.10"
