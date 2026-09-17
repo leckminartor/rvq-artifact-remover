@@ -12,6 +12,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
+from . import __version__
 from .engine import analyze, detect_comb_freq, load_audio, process, save_audio
 
 OUT_DIR = os.path.join(os.getcwd(), "output")
@@ -20,12 +21,26 @@ os.makedirs(OUT_DIR, exist_ok=True)
 _RUN = {"cancel": False}
 
 TITLE = "RVQ Artifact Remover"
+AUTHOR = "Klaus Perner (DJ LECK)"
+GITHUB_URL = "https://github.com/leckminartor/rvq-artifact-remover"
+DONATE_URL = "https://paypal.me/klausminator"
 SUBTITLE = (
     "Offline deep-processing for neural-codec quantization residuals "
     "(EnCodec / SoundStream / DAC). Cancels codec frame-rate comb modulation, "
     "unfreezes static quantization-noise bins, restores transients and tames "
     "the artificial air band."
 )
+
+
+def _neural_device_line():
+    try:
+        import torch
+        if torch.cuda.is_available():
+            name = torch.cuda.get_device_name(0)
+            return f"GPU neural stage: **CUDA - {name}**"
+        return "Neural stage device: **CPU** (torch without CUDA - DSP stages unaffected)"
+    except Exception:
+        return "Neural stage device: **CPU** (torch not installed)"
 
 
 def _spectrogram_ax(ax, y_mono, sr, title):
@@ -175,8 +190,12 @@ def cancel_run():
 
 
 def build():
-    with gr.Blocks(title=TITLE) as demo:
-        gr.Markdown(f"# {TITLE}\n{SUBTITLE}")
+    with gr.Blocks(title=f"{TITLE} v{__version__}") as demo:
+        gr.Markdown(
+            f"# {TITLE} v{__version__}\n"
+            f"### by {AUTHOR}\n"
+            f"{SUBTITLE}"
+        )
         with gr.Row():
             with gr.Column(scale=1):
                 audio_in = gr.Audio(label="Input (AI-generated audio)", type="filepath")
@@ -190,9 +209,12 @@ def build():
                 use_unfreeze = gr.Checkbox(value=True, label="Frozen-noise unfreezer + dither")
                 use_transient = gr.Checkbox(value=True, label="Transient restoration")
                 use_bandlimit = gr.Checkbox(value=True, label="Adaptive air-band roll-off")
-                gr.Markdown("**AI neural stage** (Demucs separation + per-stem "
-                            "cleanup - best quality, heavy: first run downloads "
-                            "the model, several minutes on CPU per track)")
+                gr.Markdown(
+                    "**AI neural stage** (Demucs separation + per-stem "
+                    "cleanup - best quality, heavy: first run downloads "
+                    "the model, several minutes on CPU per track)\n\n"
+                    + _neural_device_line()
+                )
                 neural_on = gr.Checkbox(value=False, label="Enable AI neural stage")
                 model_name = gr.Dropdown(
                     choices=["htdemucs", "htdemucs_ft"],
@@ -222,6 +244,12 @@ def build():
                           outputs=[audio_out, compare_plot, process_report,
                                    btn_process, btn_analyze, btn_cancel])
         btn_cancel.click(cancel_run, outputs=[process_report])
+        gr.Markdown(
+            f"---\n"
+            f"v{__version__} · by **{AUTHOR}** · "
+            f"[GitHub]({GITHUB_URL}) · "
+            f"[☕ Support]({DONATE_URL})"
+        )
     return demo
 
 
