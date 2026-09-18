@@ -67,15 +67,41 @@
   Benchmark: Comb 0.512→0.222 (DSP) →0.139 (KI); Frozen 0.704→0.144→**0.003**.
 
 ## Aktueller Status
-- v0.3.0 implementiert, alle 5 Tests grün, committet/gepusht/tagged.
-- **GitHub Release v0.3.0 veröffentlicht** ("De-hall / de-metal release",
-  Notes aus docs/release-notes-v0.3.0.md, als Latest markiert) – Stand 17.09.
-- Session-Ende 17.09.: v0.3.0 komplett abgeschlossen (Code, Doku, Tag, Release).
-- **v0.3.1 (17.09., später):** UX-Paket – modus-tagged Output-Dateinamen
-  (`<name>_<stages>_derq.wav`, Kürzel c/u/e/t/d/b + -ai/-ai-ft), Run-Historie-
-  Panel (letzte 12 Läufe, newest first), Player-Reset auf 0:00 pro Lauf
-  (unique file + Player-Clear am Laufstart). Wissensdatenbank `docs/knowledge/`
-  (faq/decisions/troubleshooting/session-user-log + scripts/export_user_log.py).
+- **Stand: 18.09. – Session-Abschluss. Alle Arbeit ist committed/gepusht; der
+  Repo-Stand auf GitHub (main) ist die Wahrheit. Voriges LLM wechselt wegen
+  leeren OpenRouter-Guthabens – neue Session: AGENTS.md lesen (wird meist
+  automatisch injiziert, sonst vom User auffordern lassen) + bei Detailfragen
+  docs/knowledge/ durchsuchen; Session-JSON nur gezielt parsen.**
+
+### Versions-/Release-Stand
+- **v0.3.1 (latest, 18.09):** Modus-Kürzel im Output-Dateinamen
+  (`<name>_<stages>_derq.wav`; c/u/e/t/d/b + -ai/-ai-ft), Run-Historie-Panel
+  (12 Einträge, newest first), Player-Reset auf 0:00 pro Lauf.
+  Release: https://github.com/leckminartor/rvq-artifact-remover/releases/tag/v0.3.1
+- **v0.3.0 (17.09):** De-Hall/De-Metal-Paket – demi_gate, echo_guard,
+  Comb-Harmonischen (2x/3x), Demucs-Residual-Cancellation (residual_keep,
+  App-Slider). Release v0.3.0 veröffentlicht.
+- Tags: v0.1.0, v0.1.1, v0.1.2, v0.2.0, v0.3.0, v0.3.1 – alle released & gepusht.
+- **CI:** grün (6 Tests, inkl. neuem Guard `tests/test_repo_hygiene.py` gegen
+  UTF-8-BOM). Veraltete CI-Fail-Mail vom 17.09 (v0.1.2-Push) war schon durch
+  Commit `50f9d34` behoben – nichts zu tun.
+
+### Am 17./18.09. dazugekommen (Übersicht)
+1. Wissensdatenbank `docs/knowledge/` (faq.md, decisions.md, troubleshooting.md,
+   session-user-log.md auto-generiert via `scripts/export_user_log.py`).
+2. Offene Nutzerfrage "KI-Hall/Echo reduzieren" → in v0.3.0 umgesetzt;
+   Strength-Wirkung auf alle Stufen dokumentiert (faq.md).
+3. A/B-Test-Workflow im App-Chat erklärt: Gleicher Input bleibt geladen, jeder
+   Lauf startet vom Original (kein Chaining), Output-Player pro Lauf neu.
+
+### Offene Themen / Roadmap (unverändert)
+1. WPE-Dereverberation als eigene Stufe (echter generativer Hall).
+2. Generative Band-Extension (z. B. AudioSR) fürs Air-Band.
+3. Real-time-Modus der DSP-Stufen.
+4. Per-Stem-Strength-Presets in der UI.
+5. Weitere Metriken (Stereo-Image-Stagnation, Modulationsrauschen).
+6. Ungetrackt & NICHT committen: `ai-music-rvq-artifact-removal-app.json` (12 MB
+   Session-Archiv), `output/`-Audio.
 
 ## Offene Themen / Roadmap (aus README)
 1. Real-time-Modus für DSP-Stufen.
@@ -105,6 +131,8 @@ Wichtige Anforderungen/Entscheidungen des Users (chronologisch):
 "Wie können wir die Soundqualität weiter verbessern? KI Hall/Echo-Effekt reduzieren?"
 → Umgesetzt: demi_gate + echo_guard + Comb-Harmonischen + Residual-Cancellation.
   Noch offen (optional): WPE-Dereverberation, generative Band-Extension.
+  User hat v0.3.x noch nicht auditiv getestet/feedbackgegeben – beim nächsten
+  Mal nach Hör-Ergebnis fragen (zu trocken? residual retention anpassen).
 
 ## Wichtige Konventionen
 - Keine Kommentare im Code (außer Docstrings), sparsame Antworten.
