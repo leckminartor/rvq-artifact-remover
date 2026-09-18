@@ -93,3 +93,11 @@ Volltextsuche: `rg -i "begriff" docs/knowledge/troubleshooting.md`
   wodurch der Browser das Widget neu remountet (neue Element-Identität) und bei
   0:00 startet. Faustregel: Bei persistierten Player-Zuständen → wechselnder
   `key` im `gr.update` erzwingt Remount.
+- **Fix (v0.3.5, tatsächlich wirksam):** Der v0.3.4-Key wurde durch die
+  Zwischen-Yields von `run_processing` zunichte gemacht (dort stand
+  `gr.update(value=None)` OHNE Key → frischer Key verworfen, altes Element samt
+  `currentTime` blieb). Jetzt verwaltet `run_processing` den Key selbst und
+  liefert ihn in JEDEM Audio-Yield: Start = leerer Remount mit Key, Ende =
+  neue Datei im selben frisch remounteten Element → immer 0:00. Lektion: Ein
+  frischer `key` nützt nur, wenn er in ALLEN nachfolgenden Yields des
+  Elements beibehalten wird.

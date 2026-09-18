@@ -133,11 +133,12 @@ def run_processing(path, strength, hf_start, comb_freq, neural_on, model_name,
                    residual_pct, use_comb, use_unfreeze, use_transient,
                    use_bandlimit, use_echo_guard, use_demi):
     history_text = "\n".join(_HISTORY)
+    audio_key = next_audio_key()
+    reset_player = gr.update(value=None, key=audio_key)
     buttons_off = (gr.update(interactive=False), gr.update(interactive=False),
                    gr.update(interactive=True))
     buttons_on = (gr.update(interactive=True), gr.update(interactive=True),
                   gr.update(interactive=False))
-    reset_player = gr.update(value=None)
     if not path:
         yield reset_player, None, "Upload an audio file first.", history_text, *buttons_on
         return
@@ -310,19 +311,14 @@ def build():
 
         btn_analyze.click(run_analysis, inputs=[audio_in, hf_start],
                           outputs=[analysis_plot, analysis_report, comb_freq])
-        btn_process.click(
-            clear_output,
-            outputs=[audio_out],
-        ).then(
-            run_processing,
-            inputs=[audio_in, strength, hf_start, comb_freq,
-                    neural_on, model_name, residual_pct,
-                    use_comb, use_unfreeze, use_transient,
-                    use_bandlimit, use_echo_guard, use_demi],
-            outputs=[audio_out, compare_plot, process_report,
-                     history_box, btn_process, btn_analyze,
-                     btn_cancel],
-        )
+        btn_process.click(run_processing,
+                          inputs=[audio_in, strength, hf_start, comb_freq,
+                                  neural_on, model_name, residual_pct,
+                                  use_comb, use_unfreeze, use_transient,
+                                  use_bandlimit, use_echo_guard, use_demi],
+                          outputs=[audio_out, compare_plot, process_report,
+                                   history_box, btn_process, btn_analyze,
+                                   btn_cancel])
         btn_cancel.click(cancel_run, outputs=[process_report])
         gr.Markdown(
             f"<div style=\"margin-top: 0px; padding-top: 6px; "
