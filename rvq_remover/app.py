@@ -131,14 +131,15 @@ def run_processing(path, strength, hf_start, comb_freq, neural_on, model_name,
                    gr.update(interactive=True))
     buttons_on = (gr.update(interactive=True), gr.update(interactive=True),
                   gr.update(interactive=False))
+    reset_player = gr.update(value=None)
     if not path:
-        yield None, None, "Upload an audio file first.", history_text, *buttons_on
+        yield reset_player, None, "Upload an audio file first.", history_text, *buttons_on
         return
     _RUN["cancel"] = False
-    yield None, None, "Loading audio...", history_text, *buttons_off
+    yield reset_player, None, "Loading audio...", history_text, *buttons_off
     y, sr = load_audio(path)
-    yield None, None, ("Running DSP stages (comb, unfreeze, echo guard, "
-                       "transient, de-metal, bandlimit)..."), history_text, *buttons_off
+    yield reset_player, None, ("Running DSP stages (comb, unfreeze, echo guard, "
+                               "transient, de-metal, bandlimit)..."), history_text, *buttons_off
 
     holder = {"status": "", "done": False, "error": None, "y": None, "rep": None}
 
@@ -183,18 +184,18 @@ def run_processing(path, strength, hf_start, comb_freq, neural_on, model_name,
     thread.start()
     while not holder["done"]:
         if _RUN["cancel"]:
-            yield None, None, "Cancelling - waiting for the current stage to finish...", history_text, *buttons_off
+            yield reset_player, None, "Cancelling - waiting for the current stage to finish...", history_text, *buttons_off
         else:
-            yield None, None, holder["status"] or "Processing...", history_text, *buttons_off
+            yield reset_player, None, holder["status"] or "Processing...", history_text, *buttons_off
         time.sleep(0.5)
     thread.join()
 
     from .engine import Cancelled
     if holder["error"] is not None:
         if isinstance(holder["error"], Cancelled):
-            yield None, None, "Processing cancelled by user.", history_text, *buttons_on
+            yield reset_player, None, "Processing cancelled by user.", history_text, *buttons_on
             return
-        yield None, None, f"Error: {holder['error']}", history_text, *buttons_on
+        yield reset_player, None, f"Error: {holder['error']}", history_text, *buttons_on
         return
     y_out = holder["y"]
 

@@ -5,6 +5,16 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.2] - 2026-09-18
+
+### Fixed
+
+- The output player now reliably resets to 0:00 after every processing run.
+  On run start the component is explicitly cleared with `gr.update(value=None)`
+  (instead of yielding plain `None`, which Gradio treats as "no change"), so
+  the previous result stops immediately; the finished run then loads a fresh,
+  uniquely named file that starts from the beginning.
+
 ## [0.3.1] - 2026-09-17
 
 ### Added

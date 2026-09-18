@@ -75,3 +75,11 @@ Volltextsuche: `rg -i "begriff" docs/knowledge/troubleshooting.md`
 2. DSP-only testen (`--neural` weglassen) → liegt's an engine oder neural?
 3. Bei Shape-Fehlern: Längen-Kette prüfen (load → resample → stems → match_length).
 4. Bei CUDA-Problemen: FP32-Fallback greift automatisch; Device-Zeile in der App prüfen.
+
+### Gradio-Audio-Player-Reset (v0.3.2)
+- **Symptom:** Output-Player blieb nach Verarbeitung an alter Position statt 0:00.
+- **Ursache:** `yield None` an `gr.Audio` gilt in Gradio als "keine Änderung",
+  nicht als "leeren" – der alte Player-Stand blieb stehen.
+- **Fix:** Beim Laufstart explizit `gr.update(value=None)` liefern (erzwingt
+  Leeren/Stop); die neue, eindeutig benannte Datei am Ende lädt frisch und
+  startet bei 0:00.
