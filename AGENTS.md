@@ -71,6 +71,11 @@
 - **GitHub Release v0.3.0 veröffentlicht** ("De-hall / de-metal release",
   Notes aus docs/release-notes-v0.3.0.md, als Latest markiert) – Stand 17.09.
 - Session-Ende 17.09.: v0.3.0 komplett abgeschlossen (Code, Doku, Tag, Release).
+- **v0.3.1 (17.09., später):** UX-Paket – modus-tagged Output-Dateinamen
+  (`<name>_<stages>_derq.wav`, Kürzel c/u/e/t/d/b + -ai/-ai-ft), Run-Historie-
+  Panel (letzte 12 Läufe, newest first), Player-Reset auf 0:00 pro Lauf
+  (unique file + Player-Clear am Laufstart). Wissensdatenbank `docs/knowledge/`
+  (faq/decisions/troubleshooting/session-user-log + scripts/export_user_log.py).
 
 ## Offene Themen / Roadmap (aus README)
 1. Real-time-Modus für DSP-Stufen.

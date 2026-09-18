@@ -19,6 +19,7 @@ OUT_DIR = os.path.join(os.getcwd(), "output")
 os.makedirs(OUT_DIR, exist_ok=True)
 
 _RUN = {"cancel": False}
+_HISTORY = []
 
 TITLE = "RVQ Artifact Remover"
 AUTHOR = "Klaus Perner (DJ LECK)"
@@ -102,20 +103,42 @@ def run_analysis(path, hf_start):
     return fig, report, comb_update
 
 
+def _mode_suffix(use_comb, use_unfreeze, use_echo_guard, use_transient,
+                 use_demi, use_bandlimit, neural_on, model_name):
+    letters = ""
+    if use_comb:
+        letters += "c"
+    if use_unfreeze:
+        letters += "u"
+    if use_echo_guard:
+        letters += "e"
+    if use_transient:
+        letters += "t"
+    if use_demi:
+        letters += "d"
+    if use_bandlimit:
+        letters += "b"
+    if neural_on:
+        letters += "-ai" + ("-ft" if model_name == "htdemucs_ft" else "")
+    return letters or "none"
+
+
 def run_processing(path, strength, hf_start, comb_freq, neural_on, model_name,
                    residual_pct, use_comb, use_unfreeze, use_transient,
                    use_bandlimit, use_echo_guard, use_demi):
+    history_text = "\n".join(_HISTORY)
     buttons_off = (gr.update(interactive=False), gr.update(interactive=False),
                    gr.update(interactive=True))
     buttons_on = (gr.update(interactive=True), gr.update(interactive=True),
                   gr.update(interactive=False))
     if not path:
-        yield None, None, "Upload an audio file first.", *buttons_on
+        yield None, None, "Upload an audio file first.", history_text, *buttons_on
         return
     _RUN["cancel"] = False
-    yield None, None, "Loading audio...", *buttons_off
+    yield None, None, "Loading audio...", history_text, *buttons_off
     y, sr = load_audio(path)
-    yield None, None, "Running DSP stages (comb, unfreeze, transient, bandlimit)...", *buttons_off
+    yield None, None, ("Running DSP stages (comb, unfreeze, echo guard, "
+                       "transient, de-metal, bandlimit)..."), history_text, *buttons_off
 
     holder = {"status": "", "done": False, "error": None, "y": None, "rep": None}
 
@@ -160,23 +183,29 @@ def run_processing(path, strength, hf_start, comb_freq, neural_on, model_name,
     thread.start()
     while not holder["done"]:
         if _RUN["cancel"]:
-            yield None, None, "Cancelling - waiting for the current stage to finish...", *buttons_off
+            yield None, None, "Cancelling - waiting for the current stage to finish...", history_text, *buttons_off
         else:
-            yield None, None, holder["status"] or "Processing...", *buttons_off
+            yield None, None, holder["status"] or "Processing...", history_text, *buttons_off
         time.sleep(0.5)
     thread.join()
 
     from .engine import Cancelled
     if holder["error"] is not None:
         if isinstance(holder["error"], Cancelled):
-            yield None, None, "Processing cancelled by user.", *buttons_on
+            yield None, None, "Processing cancelled by user.", history_text, *buttons_on
             return
-        yield None, None, f"Error: {holder['error']}", *buttons_on
+        yield None, None, f"Error: {holder['error']}", history_text, *buttons_on
         return
     y_out = holder["y"]
 
     base = os.path.splitext(os.path.basename(path))[0]
-    out_path = os.path.join(tempfile.mkdtemp(dir=OUT_DIR), f"{base}_derq.wav")
+    safe_base = "".join(ch if (ch.isalnum() or ch in "-_") else "_" for ch in base)
+    suffix = _mode_suffix(bool(use_comb), bool(use_unfreeze),
+                          bool(use_echo_guard), bool(use_transient),
+                          bool(use_demi), bool(use_bandlimit),
+                          bool(neural_on), model_name)
+    out_path = os.path.join(tempfile.mkdtemp(dir=OUT_DIR),
+                            f"{safe_base}_{suffix}_derq.wav")
     save_audio(out_path, y_out, sr)
 
     fig, axes = plt.subplots(2, 1, figsize=(10, 7), sharex=True)
@@ -198,8 +227,17 @@ def run_processing(path, strength, hf_start, comb_freq, neural_on, model_name,
         f"Comb depth @75 Hz:          {b['comb_score']:8.3f}  {a['comb_score']:8.3f}\n"
         f"Energy edge:          {b['energy_edge_hz']:8.0f}Hz {a['energy_edge_hz']:8.0f}Hz"
         f"\n\nPipeline: DSP stages{neural_note}"
+        f"\nOutput: {os.path.basename(out_path)}"
     )
-    yield out_path, fig, report, *buttons_on
+
+    stamp = time.strftime("%H:%M")
+    desc = f"strength {float(strength):.0f}%"
+    if neural_on:
+        desc += f" | AI {model_name} | residual {float(residual_pct):.0f}%"
+    _HISTORY.insert(0, f"[{stamp}]  {os.path.basename(out_path)}  |  {desc}")
+    del _HISTORY[12:]
+    history_text = "\n".join(_HISTORY)
+    yield out_path, fig, report, history_text, *buttons_on
 
 
 def cancel_run():
@@ -255,6 +293,9 @@ def build():
                 audio_out = gr.Audio(label="Processed output", type="filepath")
                 compare_plot = gr.Plot(label="Before / after")
                 process_report = gr.Textbox(label="Processing report", lines=6)
+                history_box = gr.Textbox(label="Run history (newest first - "
+                                               "player resets to 0:00 per run)",
+                                         lines=6, interactive=False)
 
         btn_analyze.click(run_analysis, inputs=[audio_in, hf_start],
                           outputs=[analysis_plot, analysis_report, comb_freq])
@@ -264,7 +305,8 @@ def build():
                                   use_comb, use_unfreeze, use_transient,
                                   use_bandlimit, use_echo_guard, use_demi],
                           outputs=[audio_out, compare_plot, process_report,
-                                   btn_process, btn_analyze, btn_cancel])
+                                   history_box, btn_process, btn_analyze,
+                                   btn_cancel])
         btn_cancel.click(cancel_run, outputs=[process_report])
         gr.Markdown(
             f"<div style=\"margin-top: 0px; padding-top: 6px; "
