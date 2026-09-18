@@ -5,6 +5,17 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.4] - 2026-09-18
+
+### Fixed
+
+- The output player really does reset to 0:00 after a new run now. Even with a
+  dedicated `.then(clear)` event, Gradio kept the same `<audio>` element and
+  its `currentTime` when only the file value changed. Each run now assigns a
+  fresh `key` to the Audio component, forcing the browser to remount it as a
+  brand-new element that always starts from the beginning (and never caches
+  the previous position).
+
 ## [0.3.3] - 2026-09-18
 
 ### Fixed

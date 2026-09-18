@@ -87,3 +87,9 @@ Volltextsuche: `rg -i "begriff" docs/knowledge/troubleshooting.md`
 - **Fix (v0.3.3):** Das Leeren als **eigenen Event-Schritt** vorschalten:
   `btn_process.click(clear_output, outputs=[audio_out]).then(run_processing, ...)`.
   So wechselt der Player garantiert *leer -> neue Datei* und startet bei 0:00.
+- **Fix (v0.3.4, entscheidend):** Auch das war nicht genug – Gradio behält bei
+  reinem `value`-Wechsel dasselbe `<audio>`-Element samt `currentTime`. Jeder
+  Lauf vergibt jetzt einen frischen `key` (`gr.update(value=None, key=audio-out-N)`),
+  wodurch der Browser das Widget neu remountet (neue Element-Identität) und bei
+  0:00 startet. Faustregel: Bei persistierten Player-Zuständen → wechselnder
+  `key` im `gr.update` erzwingt Remount.

@@ -20,6 +20,12 @@ os.makedirs(OUT_DIR, exist_ok=True)
 
 _RUN = {"cancel": False}
 _HISTORY = []
+_RUN_COUNTER = {"n": 0}
+
+
+def next_audio_key():
+    _RUN_COUNTER["n"] += 1
+    return f"audio-out-{_RUN_COUNTER['n']}"
 
 TITLE = "RVQ Artifact Remover"
 AUTHOR = "Klaus Perner (DJ LECK)"
@@ -247,7 +253,7 @@ def cancel_run():
 
 
 def clear_output():
-    return gr.update(value=None)
+    return gr.update(value=None, key=next_audio_key())
 
 
 def build():
