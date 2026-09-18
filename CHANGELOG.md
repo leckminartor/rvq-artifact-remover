@@ -5,6 +5,17 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.3] - 2026-09-18
+
+### Fixed
+
+- The output player now genuinely resets to 0:00 even when the user plays the
+  previous result and then starts another run. Clearing the Audio component
+  from within the long-running generator was being coalesced by Gradio with
+  the final file yield (the `src` swap kept the old `currentTime`). The clear
+  is now a dedicated `.then()` event that runs before processing, so the
+  player always transitions *empty -> new file* and starts from the beginning.
+
 ## [0.3.2] - 2026-09-18
 
 ### Fixed

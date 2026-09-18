@@ -246,6 +246,10 @@ def cancel_run():
     return "Cancelling - waiting for the current stage to finish..."
 
 
+def clear_output():
+    return gr.update(value=None)
+
+
 def build():
     with gr.Blocks(title=f"{TITLE} v{__version__}") as demo:
         gr.Markdown(
@@ -300,14 +304,19 @@ def build():
 
         btn_analyze.click(run_analysis, inputs=[audio_in, hf_start],
                           outputs=[analysis_plot, analysis_report, comb_freq])
-        btn_process.click(run_processing,
-                          inputs=[audio_in, strength, hf_start, comb_freq,
-                                  neural_on, model_name, residual_pct,
-                                  use_comb, use_unfreeze, use_transient,
-                                  use_bandlimit, use_echo_guard, use_demi],
-                          outputs=[audio_out, compare_plot, process_report,
-                                   history_box, btn_process, btn_analyze,
-                                   btn_cancel])
+        btn_process.click(
+            clear_output,
+            outputs=[audio_out],
+        ).then(
+            run_processing,
+            inputs=[audio_in, strength, hf_start, comb_freq,
+                    neural_on, model_name, residual_pct,
+                    use_comb, use_unfreeze, use_transient,
+                    use_bandlimit, use_echo_guard, use_demi],
+            outputs=[audio_out, compare_plot, process_report,
+                     history_box, btn_process, btn_analyze,
+                     btn_cancel],
+        )
         btn_cancel.click(cancel_run, outputs=[process_report])
         gr.Markdown(
             f"<div style=\"margin-top: 0px; padding-top: 6px; "

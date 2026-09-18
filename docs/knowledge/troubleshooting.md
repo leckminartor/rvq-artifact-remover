@@ -76,10 +76,14 @@ Volltextsuche: `rg -i "begriff" docs/knowledge/troubleshooting.md`
 3. Bei Shape-Fehlern: Längen-Kette prüfen (load → resample → stems → match_length).
 4. Bei CUDA-Problemen: FP32-Fallback greift automatisch; Device-Zeile in der App prüfen.
 
-### Gradio-Audio-Player-Reset (v0.3.2)
-- **Symptom:** Output-Player blieb nach Verarbeitung an alter Position statt 0:00.
-- **Ursache:** `yield None` an `gr.Audio` gilt in Gradio als "keine Änderung",
-  nicht als "leeren" – der alte Player-Stand blieb stehen.
-- **Fix:** Beim Laufstart explizit `gr.update(value=None)` liefern (erzwingt
-  Leeren/Stop); die neue, eindeutig benannte Datei am Ende lädt frisch und
-  startet bei 0:00.
+### Gradio-Audio-Player-Reset (v0.3.2 / v0.3.3)
+- **Symptom:** Output-Player sprang nach einem weiteren Durchgang nicht auf 0:00,
+  obwohl v0.3.1 `gr.update(value=None)` beim Laufstart setzte.
+- **Ursache (v0.3.2):** `yield None` an `gr.Audio` gilt als "keine Änderung".
+- **Ursache (v0.3.3, der eigentliche Kern):** Selbst `gr.update(value=None)`
+  aus dem langlaufenden Generator wird von Gradio mit dem finalen Datei-Yield
+  **koalesziert** – der Browser tauscht den `src` in-place und behält
+  `currentTime`; die alte Position bleibt stehen.
+- **Fix (v0.3.3):** Das Leeren als **eigenen Event-Schritt** vorschalten:
+  `btn_process.click(clear_output, outputs=[audio_out]).then(run_processing, ...)`.
+  So wechselt der Player garantiert *leer -> neue Datei* und startet bei 0:00.
