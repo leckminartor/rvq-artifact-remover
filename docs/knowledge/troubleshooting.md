@@ -13,6 +13,17 @@ Volltextsuche: `rg -i "begriff" docs/knowledge/troubleshooting.md`
   istft immer mit `length=len(x)` aufrufen. Regel: Nach JEDER Resample-/STFT-
   Runde Längen hart angleichen.
 
+### CI-Mails: Fehlschlag-Mail kann veraltet sein
+- **Fall (17.09.):** "CI: All jobs have failed"-Mail für alle 3 Python-Versionen,
+  failed in 6–10 s – war der v0.1.2-Push (Run 35206160908, BOM-Bug), **bereits
+  2 Minuten später durch Commit `50f9d34` behoben**. Der User bekam die Mail
+  trotzdem noch zugestellt.
+- **Vorgehen bei CI-Mails:** Erst `gh run list --limit 20` prüfen (ist der Run
+  überhaupt der aktuellste?) → `gh run view <id> --log-failed` für Ursache.
+  Fehlschlag < 15 s = Setup/Install-Problem (pip/checkout), NICHT Tests.
+- **Guard:** `tests/test_repo_hygiene.py` prüft jetzt auf UTF-8-BOM in
+  pyproject/CITATION/README/__init__ – kann CI nicht mehr schleichend brechen.
+
 ### pip tomllib lehnt UTF-8-BOM ab
 - **Symptom:** `pip install -e .` schlägt fehl ("tomllib rejects BOM").
 - **Ursache:** UTF-8-BOM am Dateianfang (Windows-Editor).
