@@ -5,6 +5,17 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.13] - 2026-09-18
+
+### Fixed
+
+- The output player now really resets to 0:00 on every run. The key remount
+  alone did not force a reset in Gradio 6.27 (the element's currentTime
+  survived), and a `js=` handler on the processing click corrupted the
+  slider inputs. A dedicated js-only event (no backend fn, no inputs) now
+  runs a browser script that pauses every audio/video element and sets
+  `currentTime = 0` on click - before the normal processing event fires.
+
 ## [0.3.12] - 2026-09-18
 
 ### Fixed

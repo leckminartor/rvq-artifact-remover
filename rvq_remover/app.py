@@ -340,6 +340,21 @@ def build():
         btn_analyze.click(run_analysis, inputs=[audio_in, hf_start],
                           outputs=[analysis_plot, analysis_report, comb_freq])
         btn_process.click(
+            js=(
+                "() => { "
+                "const reset = (root) => { "
+                "root.querySelectorAll('audio, video').forEach((a) => { "
+                "try { a.pause(); a.currentTime = 0; } catch (e) {} "
+                "}); "
+                "root.querySelectorAll('*').forEach((el) => { "
+                "if (el.shadowRoot) reset(el.shadowRoot); "
+                "}); "
+                "}; "
+                "reset(document); "
+                "}"
+            ),
+        )
+        btn_process.click(
             run_processing,
             inputs=[audio_in, strength, hf_start, comb_freq,
                     neural_on, model_name, residual_pct,

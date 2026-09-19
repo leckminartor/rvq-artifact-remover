@@ -101,6 +101,18 @@ Volltextsuche: `rg -i "begriff" docs/knowledge/troubleshooting.md`
   nachfolgenden Yields dieses Elements denselben `key` mitschicken –
   ein nackter String (auch am Ende) hebt ihn auf.
 
+### Gradio-Audio-Player-Reset – finaler Weg: js-only Event (v0.3.13)
+- **Stand der Dinge:** key-Remount (v0.3.5/v0.3.12) allein erzwingt in Gradio
+  6.27 KEINEN Playback-Reset (currentTime überlebt). `js=` am selben Event wie
+  `fn` zerstört Inputs (v0.3.10/0.3.11). Der sichere Weg: ein **separates,
+  js-only Event** ohne Backend-fn und ohne Inputs – Gradio führt es komplett
+  im Browser aus, der Rückgabewert ist irrelevant:
+  `btn_process.click(js="() => { ...a.pause(); a.currentTime = 0... }")` +
+  normaler `btn_process.click(run_processing, ...)` für die Verarbeitung.
+- **Lektion:** Browser-Seiteneffekte VOR einem Python-Event nie über `js=`
+  am selben Event-Trigger (kollidiert mit Input-Vertrag) – sondern als
+  eigenständiges js-only `.click()` registrieren.
+
 ### Gradio-`js=`-Handler zerstört Event-Inputs (v0.3.11)
 - **Symptom:** *Process*-Klick meldet "Fehler", Traceback: `Expected a float,
   but the value passed was None` für Slider; `preprocess_data` →
