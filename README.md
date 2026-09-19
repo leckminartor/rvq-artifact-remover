@@ -3,7 +3,7 @@
 [![CI](https://github.com/leckminartor/rvq-artifact-remover/actions/workflows/ci.yml/badge.svg)](https://github.com/leckminartor/rvq-artifact-remover/actions/workflows/ci.yml)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.3.5-green.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.3.6-green.svg)](CHANGELOG.md)
 [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-FFDD00?style=flat&logo=buy-me-a-coffee&logoColor=black)](https://paypal.me/klausminator)
 
 **Offline removal of neural-codec (RVQ) quantization artifacts from AI-generated music.**

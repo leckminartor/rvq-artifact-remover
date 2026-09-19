@@ -101,3 +101,17 @@ Volltextsuche: `rg -i "begriff" docs/knowledge/troubleshooting.md`
   neue Datei im selben frisch remounteten Element → immer 0:00. Lektion: Ein
   frischer `key` nützt nur, wenn er in ALLEN nachfolgenden Yields des
   Elements beibehalten wird.
+- **Fix (v0.3.6, final zuverlässig):** Gradio hält die `currentTime` des
+  `<audio>`-Elements selbst über `value`-/`key`-Wechsel hinweg hart fest –
+  serverseitige Resets reichen nicht. Der zuverlässige Weg ist ein
+  **Browser-JS-Reset über den `js=`-Parameter des Click-Events**:
+  `document.querySelectorAll('audio').forEach(a => { a.pause(); a.currentTime = 0; })`
+  – läuft beim Klick VOR der Verarbeitung. Faustregel: Bei Gradio-Audio-
+  Positionen ist serverseitig nichts garantiert → JS auf dem Click-Event nutzen.
+- **Fix (v0.3.6, final zuverlässig):** Selbst konsistente `key`s remounten die
+  Wiedergabeposition nicht garantiert – Gradio hält `currentTime` hart. Der
+  zuverlässige Weg ist ein **Browser-JS-Reset über den `js=`-Parameter von
+  `btn_process.click`**: `document.querySelectorAll('audio').forEach(a => { a.pause();
+  a.currentTime = 0; })` läuft beim Klick VOR der Verarbeitung. Lektion: Bei
+  Gradio-Audio-Positionen ist serverseitig nichts garantiert → JS auf dem
+  Click-Event nutzen.

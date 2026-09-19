@@ -5,6 +5,17 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.6] - 2026-09-18
+
+### Fixed
+
+- The output player now resets to 0:00 on every new run, even when the
+  previous result had been played. Gradio keeps the `<audio>` element's
+  `currentTime` across value/key changes, so server-side resets were not
+  enough. The *Process* button now runs a small browser script first that
+  pauses every `<audio>` element and sets `currentTime = 0` before the
+  processing starts, guaranteeing playback starts from the beginning.
+
 ## [0.3.5] - 2026-09-18
 
 ### Fixed
