@@ -104,6 +104,19 @@ Volltextsuche: `rg -i "begriff" docs/knowledge/troubleshooting.md`
   aus der HTML parsen und einzeln laden) + `Accept-Encoding: br` – nur `GET /`
   reicht nicht.
 
+### Gradio-`js=`-Rückgabewert killt Slider-Inputs (v0.3.10)
+- **Symptom:** Beim *Process*-Klick: `Expected a float, but the value passed was
+  None` für Slider (nachdem der Content-Length-Start-Fix griff). Traceback über
+  `preprocess_data` → `slider.raise_if_out_of_bounds`.
+- **Ursache:** Das eigene `js=`-Skript (Player-Reset, v0.3.6) gab `undefined`
+  zurück. Gradio interpretiert den JS-Rückgabewert als neue Event-Inputs →
+  ALLE Slider/Componenten wurden `None`.
+- **Fix (v0.3.10):** JS gibt `data` (die eingehenden Inputs) unverändert
+  zurück: `(data) => { ...reset audio...; return data; }`.
+- **Lektion:** Ein `js=`-Handler muss IMMER `data` zurückgeben, sonst werden
+  Inputs zerstört. Kein `() => {}` / kein `undefined`-Return bei Events mit
+  Inputs.
+
 ### Gradio-Audio-Player-Reset (v0.3.2 / v0.3.3)
 - **Symptom:** Output-Player sprang nach einem weiteren Durchgang nicht auf 0:00,
   obwohl v0.3.1 `gr.update(value=None)` beim Laufstart setzte.

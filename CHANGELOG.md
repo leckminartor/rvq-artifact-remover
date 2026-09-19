@@ -5,6 +5,17 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.10] - 2026-09-18
+
+### Fixed
+
+- Processing no longer crashes with `None` slider values after clicking
+  *Process*. The v0.3.6 browser reset script returned `undefined`, and Gradio
+  feeds the JS return value back as the event inputs, nulling every slider.
+  The script now returns the incoming `data` unchanged (while still pausing
+  and resetting all `<audio>`/`<video>` elements to 0:00, including shadow
+  DOM).
+
 ## [0.3.9] - 2026-09-18
 
 ### Fixed

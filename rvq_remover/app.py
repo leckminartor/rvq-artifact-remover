@@ -349,8 +349,16 @@ def build():
                      history_box, btn_process, btn_analyze,
                      btn_cancel],
             js=(
-                "() => { document.querySelectorAll('audio').forEach((a) => { "
-                "a.pause(); a.currentTime = 0; }); }"
+                "(data) => { "
+                "const nodes = []; "
+                "const walk = (root) => { "
+                "root.querySelectorAll('audio, video').forEach((a) => nodes.push(a)); "
+                "root.querySelectorAll('*').forEach((el) => { if (el.shadowRoot) walk(el.shadowRoot); }); "
+                "}; "
+                "walk(document); "
+                "nodes.forEach((a) => { try { a.pause(); a.currentTime = 0; } catch (e) {} }); "
+                "return data; "
+                "}"
             ),
         )
         btn_cancel.click(cancel_run, outputs=[process_report])
