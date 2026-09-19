@@ -91,17 +91,18 @@ Volltextsuche: `rg -i "begriff" docs/knowledge/troubleshooting.md`
   bzw. `h11 LocalProtocolError: Too much data for declared Content-Length` beim
   Laden der Seite (Traceback über `gradio/brotli_middleware.py` →
   `starlette/responses.py` → `uvicorn send`), noch bevor Verarbeitung läuft.
-- **Ursache:** Gradios `BrotliMiddleware` ist mit dem installierten Starlette
-  inkompatibel: sie komprimiert, sendet aber mehr Bytes als die deklarierte
-  `Content-Length`. Tritt nur auf, wenn der Browser `Accept-Encoding: br` sendet
-  (mein erster Test ohne `br` war fehl-positiv grün!). Auch nach Wechsel ins
-  frische `.venv` (gradio 6.28/starlette 1.6) blieb der Fehler bestehen.
-- **Fix (v0.3.7):** `BrotliMiddleware` wird beim Import in `rvq_remover/app.py`
-  durch eine Pass-through-Middleware ersetzt → App serviert unkomprimiert
-  (für lokalen Einsatz völlig ok). Verifiziert mit `Accept-Encoding: gzip,
-  deflate, br` → HTTP 200.
-- **Lektion:** Beim Testen lokaler Gradio-Apps IMMER auch mit
-  `Accept-Encoding: br` abfragen, sonst übersieht man Kompressionspfad-Bugs.
+- **Ursache (korrigiert, v0.3.9):** NICHT Brotli allein – einige Asset-Responses
+  (z. B. das ~130-KB-JS-Bundle) werden mit einem zu kleinen `Content-Length`
+  gesendet; uvicorn/h11 lehnt das ab. Mein erster `GET /`-Test war fehl-positiv
+  grün, weil nur die kleine HTML-Seite geladen wurde; der Browser lädt danach
+  die großen JS-Bundles → Crash.
+- **Fix (v0.3.9, endgültig):** Injizierte Middleware in `rvq_remover/app.py`
+  entfernt den `Content-Length`-Header aus ALLEN HTTP-Antworten → uvicorn nutzt
+  Chunked-Transfer-Encoding. Verifiziert: Seite + größtes JS-Asset (133 KB) mit
+  `Accept-Encoding: br` → HTTP 200.
+- **Lektion:** Lokale Gradio-Apps IMMER auch mit Asset-Requests testen (JS/CSS
+  aus der HTML parsen und einzeln laden) + `Accept-Encoding: br` – nur `GET /`
+  reicht nicht.
 
 ### Gradio-Audio-Player-Reset (v0.3.2 / v0.3.3)
 - **Symptom:** Output-Player sprang nach einem weiteren Durchgang nicht auf 0:00,

@@ -5,6 +5,18 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.9] - 2026-09-18
+
+### Fixed
+
+- The startup crash `Too much data for declared Content-Length` is gone for
+  good. Root cause: some asset responses (e.g. the ~130 KB JS bundle) were
+  sent with a Content-Length that is too small, which uvicorn/h11 rejects.
+  The middleware injected in `rvq_remover/app.py` now strips the
+  Content-Length header from all HTTP responses so they use chunked transfer
+  encoding - verified by fetching the page and the largest JS asset
+  (HTTP 200, 133 KB).
+
 ## [0.3.8] - 2026-09-18
 
 ### Fixed

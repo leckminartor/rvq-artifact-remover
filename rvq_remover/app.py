@@ -12,20 +12,32 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-# Gradio's BrotliMiddleware is incompatible with the installed starlette
-# (it sends more bytes than the declared Content-Length -> uvicorn/h11
-# "Too much data for declared Content-Length"). Serve uncompressed instead.
+# Gradio's BrotliMiddleware is incompatible with the installed starlette, and
+# some asset responses are sent with a Content-Length that is too small
+# (uvicorn/h11: "Too much data for declared Content-Length"). We strip the
+# Content-Length header so responses use chunked transfer encoding instead.
 try:
     from gradio import routes as _gr_routes
 
-    class _Passthrough:
+    class _StripContentLength:
         def __init__(self, app, **kwargs):
             self._app = app
 
         async def __call__(self, scope, receive, send):
-            await self._app(scope, receive, send)
+            if scope["type"] != "http":
+                return await self._app(scope, receive, send)
 
-    _gr_routes.BrotliMiddleware = _Passthrough
+            async def _send(message):
+                if message["type"] == "http.response.start":
+                    message["headers"] = [
+                        (k, v) for (k, v) in message.get("headers", [])
+                        if k.lower() != b"content-length"
+                    ]
+                await send(message)
+
+            await self._app(scope, receive, _send)
+
+    _gr_routes.BrotliMiddleware = _StripContentLength
 except Exception:
     pass
 
