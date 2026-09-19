@@ -274,7 +274,7 @@ def run_processing(path, strength, hf_start, comb_freq, neural_on, model_name,
     _HISTORY.insert(0, f"[{stamp}]  {os.path.basename(out_path)}  |  {desc}")
     del _HISTORY[12:]
     history_text = "\n".join(_HISTORY)
-    yield out_path, fig, report, history_text, *buttons_on
+    yield gr.update(value=out_path, key=audio_key), fig, report, history_text, *buttons_on
 
 
 def cancel_run():

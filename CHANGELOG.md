@@ -5,6 +5,17 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.12] - 2026-09-18
+
+### Fixed
+
+- The output player now really starts at 0:00 after a new run. The final
+  yield returned the file path as a plain string, which dropped the fresh
+  per-run `key` and kept the old element's playback position. The final
+  yield now returns `gr.update(value=out_path, key=audio_key)` so the new
+  file loads in the freshly remounted element, which always starts from the
+  beginning.
+
 ## [0.3.11] - 2026-09-18
 
 ### Fixed

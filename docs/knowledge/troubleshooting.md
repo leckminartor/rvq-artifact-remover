@@ -87,6 +87,20 @@ Volltextsuche: `rg -i "begriff" docs/knowledge/troubleshooting.md`
 - **Lektion:** Nach Neuanlage des `.venv` IMMER `[neural]`-Deps prüfen
   (`python -c "import torch, demucs"`), sonst schlägt die KI-Stufe still fehl.
 
+### Gradio-Audio-Player-Reset – finaler Yield muss `key` mitführen (v0.3.12)
+- **Symptom:** Nach einem neuen Durchlauf stand der Output-Player weiterhin
+  an der alten Position (z. B. 1:05) statt bei 0:00 – obwohl die App wieder
+  läuft und der Process-Klick funktioniert.
+- **Ursache:** Der finale Yield lieferte `out_path` als nackten String – ohne
+  den frischen per-run `key`. Gradio behielt damit das alte `<audio>`-Element
+  samt `currentTime`; der Key-Remount (v0.3.5) wurde durch den String-Yield
+  wieder verworfen.
+- **Fix (v0.3.12):** Finaler Yield liefert `gr.update(value=out_path, key=audio_key)`
+  – die neue Datei lädt im frisch remounteten Element und startet bei 0:00.
+- **Lektion:** Wenn man einen `key`-Remount verwendet, MÜSSEN ALLE
+  nachfolgenden Yields dieses Elements denselben `key` mitschicken –
+  ein nackter String (auch am Ende) hebt ihn auf.
+
 ### Gradio-`js=`-Handler zerstört Event-Inputs (v0.3.11)
 - **Symptom:** *Process*-Klick meldet "Fehler", Traceback: `Expected a float,
   but the value passed was None` für Slider; `preprocess_data` →
