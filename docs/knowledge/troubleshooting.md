@@ -87,6 +87,20 @@ Volltextsuche: `rg -i "begriff" docs/knowledge/troubleshooting.md`
 - **Lektion:** Nach Neuanlage des `.venv` IMMER `[neural]`-Deps prüfen
   (`python -c "import torch, demucs"`), sonst schlägt die KI-Stufe still fehl.
 
+### Gradio-`js=`-Handler zerstört Event-Inputs (v0.3.11)
+- **Symptom:** *Process*-Klick meldet "Fehler", Traceback: `Expected a float,
+  but the value passed was None` für Slider; `preprocess_data` →
+  `slider.raise_if_out_of_bounds`.
+- **Ursache:** Gradio's `js=`-Handler (Button) bekommt Inputs+Outputs als
+  Argumente und MUSS die komplette Input-Liste zurückgeben. Ein falscher
+  Rückgabewert (z. B. nur ein Wert / `undefined`) nullt alle Slider.
+- **Fix (v0.3.11):** `js=`-Handler komplett ENTFERNT. Player-Reset auf 0:00
+  läuft serverseitig über den per-run `key`-Remount (v0.3.5) – deterministisch,
+  ohne Eingriffe in Event-Inputs.
+- **Lektion:** Bei Gradio-BUTTON-Events mit Inputs: NICHT `js=` verwenden,
+  wenn man nicht exakt die Input-Liste zurückspiegelt; serverseitige Lösung
+  (key-Remount) ist robuster.
+
 ### gradio-Slider-Regression (6.28.0) – `None` statt Zahl (17.09.)
 - **Symptom:** Beim *Process*-Klick crasht `preprocess_data` mit
   `TypeError: '<' not supported between instances of 'NoneType' and 'int'`

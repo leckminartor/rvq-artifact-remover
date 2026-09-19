@@ -5,6 +5,17 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.11] - 2026-09-18
+
+### Fixed
+
+- The *Process* click no longer fails with `None` slider values. The
+  browser `js=` handler on the button corrupted the event inputs (Gradio
+  expects the JS function to return the full input list; returning a wrong
+  value nulled every slider). The `js=` handler is removed; the output
+  player reset to 0:00 is handled server-side via the per-run `key` remount
+  (from v0.3.5), which works deterministically.
+
 ## [0.3.10] - 2026-09-18
 
 ### Fixed

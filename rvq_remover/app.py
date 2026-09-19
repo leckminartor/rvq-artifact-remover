@@ -348,18 +348,6 @@ def build():
             outputs=[audio_out, compare_plot, process_report,
                      history_box, btn_process, btn_analyze,
                      btn_cancel],
-            js=(
-                "(data) => { "
-                "const nodes = []; "
-                "const walk = (root) => { "
-                "root.querySelectorAll('audio, video').forEach((a) => nodes.push(a)); "
-                "root.querySelectorAll('*').forEach((el) => { if (el.shadowRoot) walk(el.shadowRoot); }); "
-                "}; "
-                "walk(document); "
-                "nodes.forEach((a) => { try { a.pause(); a.currentTime = 0; } catch (e) {} }); "
-                "return data; "
-                "}"
-            ),
         )
         btn_cancel.click(cancel_run, outputs=[process_report])
         gr.Markdown(
