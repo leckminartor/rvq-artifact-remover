@@ -5,6 +5,16 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.8] - 2026-09-18
+
+### Fixed
+
+- Processing no longer crashes with a `Slider` preprocessing error after the
+  very new gradio 6.28.0 began passing `None` for slider values. The app
+  dependency is now capped (`gradio>=4.0,<6.28.0`) and the project `.venv`
+  is pinned to the proven gradio 6.27.0 (the BrotliMiddleware bypass from
+  0.3.7 stays in place).
+
 ## [0.3.7] - 2026-09-18
 
 ### Fixed

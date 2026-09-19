@@ -76,7 +76,17 @@ Volltextsuche: `rg -i "begriff" docs/knowledge/troubleshooting.md`
 3. Bei Shape-Fehlern: Längen-Kette prüfen (load → resample → stems → match_length).
 4. Bei CUDA-Problemen: FP32-Fallback greift automatisch; Device-Zeile in der App prüfen.
 
-### gradio/starlette-Versionskonflikt beim App-Start (17.09.)
+### gradio-Slider-Regression (6.28.0) – `None` statt Zahl (17.09.)
+- **Symptom:** Beim *Process*-Klick crasht `preprocess_data` mit
+  `TypeError: '<' not supported between instances of 'NoneType' and 'int'`
+  ("Expected a float, but the value passed was None") – Slider liefern `None`.
+- **Ursache:** gradio 6.28.0 (brandneu) übergibt Slider-Werte als `None`.
+- **Fix:** gradio auf 6.27.0 gepinnt (`.venv`) + Obergrenze im `[app]`-Extra
+  (`gradio>=4.0,<6.28.0`). Brotli-Patch (0.3.7) bleibt aktiv.
+- **Lektion:** brandneue Gradio-Minor-Versionen bei solchen Apps nicht blind
+  übernehmen; nach Upgrade IMMER den Slider-Preprocess-Pfad testen.
+
+### gradio/starlette-Brotli-Konflikt beim App-Start (17.09.)
 - **Symptom:** `RuntimeError: Response content longer than Content-Length`
   bzw. `h11 LocalProtocolError: Too much data for declared Content-Length` beim
   Laden der Seite (Traceback über `gradio/brotli_middleware.py` →

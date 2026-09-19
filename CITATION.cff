@@ -6,7 +6,7 @@ message: >-
 type: software
 authors:
   - name: leckminartor
-version: 0.3.7
+version: 0.3.8
 date-released: "2026-09-17"
 license: MIT
 repository-code: "https://github.com/leckminartor/rvq-artifact-remover"

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rvq-artifact-remover"
-version = "0.3.7"
+version = "0.3.8"
 description = "Remove neural-codec (RVQ) quantization artifacts from AI-generated music - comb suppression (incl. harmonics), frozen-noise unfreezing, pre/post-echo guard, de-metal adaptive spectral gate, transient restoration, optional Demucs neural stage with residual cancellation"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -36,7 +36,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-app = ["gradio>=4.0"]
+app = ["gradio>=4.0,<6.28.0"]
 neural = ["torch>=2.0", "torchaudio>=2.0", "demucs>=4.0"]
 dev = ["pytest>=8"]
 
