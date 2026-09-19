@@ -76,6 +76,20 @@ Volltextsuche: `rg -i "begriff" docs/knowledge/troubleshooting.md`
 3. Bei Shape-Fehlern: Längen-Kette prüfen (load → resample → stems → match_length).
 4. Bei CUDA-Problemen: FP32-Fallback greift automatisch; Device-Zeile in der App prüfen.
 
+### gradio/starlette-Versionskonflikt beim App-Start (17.09.)
+- **Symptom:** `RuntimeError: Response content longer than Content-Length` beim
+  Laden der Seite (Traceback über `gradio/brotli_middleware.py` →
+  `starlette/responses.py` → `uvicorn send`), noch bevor Verarbeitung läuft.
+- **Ursache:** `gradio 6.27.0` mit zu neuem `starlette 1.3.1` + `fastapi 0.133.1`
+  (Gradios Brotli-Middleware erweitert Starlettes GZipResponder, dessen
+  Content-Length-Handling sich in Starlette 1.3 geändert hat). Vermutlich hat
+  ein anderes Tool im gemeinsamen venv starlette hochgezogen.
+- **Fix:** Eigenes App-venv anlegen (`python -m venv .venv`), `pip install -e ".[app]"`
+  → installiert abgestimmte Kombination (gradio 6.28 + starlette 1.6 + fastapi
+  0.141). `Start RVQ Remover.bat` nutzt jetzt `.venv` (legt es bei Fehlen selbst an).
+- **Wichtig:** Die App teilt sich NICHT mehr das Agent-Tool-venv → Downgrades dort
+  beeinflussen die App nicht mehr.
+
 ### Gradio-Audio-Player-Reset (v0.3.2 / v0.3.3)
 - **Symptom:** Output-Player sprang nach einem weiteren Durchgang nicht auf 0:00,
   obwohl v0.3.1 `gr.update(value=None)` beim Laufstart setzte.
