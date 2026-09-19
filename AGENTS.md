@@ -72,6 +72,13 @@
   leeren OpenRouter-Guthabens – neue Session: AGENTS.md lesen (wird meist
   automatisch injiziert, sonst vom User auffordern lassen) + bei Detailfragen
   docs/knowledge/ durchsuchen; Session-JSON nur gezielt parsen.**
+- **Umgebung (18.09., nach Start-Crash-Serie):** Eigenes `.venv` im Repo
+  (isolierte App-Umgebung, in .gitignore). Enthält: DSP+App-Deps, gradio
+  6.27.0 (gepinnt, <6.28 wegen Slider-None-Regression), **torch 2.11+cu128 +
+  torchaudio + demucs** (KI-Stufe, RTX-3060-CUDA). Brotli/Content-Length-Patch
+  in app.py (strip Content-Length → chunked). `Start RVQ Remover.bat` nutzt
+  `.venv` und legt es bei Fehlen an (`[app]`-Deps; **neural separat nach-
+  installieren** via `pip install torch torchaudio --index-url ...cu128` + demucs).
 
 ### Versions-/Release-Stand
 - **v0.3.1 (latest, 18.09):** Modus-Kürzel im Output-Dateinamen

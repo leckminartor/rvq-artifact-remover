@@ -76,6 +76,17 @@ Volltextsuche: `rg -i "begriff" docs/knowledge/troubleshooting.md`
 3. Bei Shape-Fehlern: Längen-Kette prüfen (load → resample → stems → match_length).
 4. Bei CUDA-Problemen: FP32-Fallback greift automatisch; Device-Zeile in der App prüfen.
 
+### Eigenes `.venv` fehlt Neural-Deps → "No module named 'torch'" (18.09.)
+- **Symptom:** Beim *Process*-Klick (KI-Stufe an) "Error: No module named 'torch'".
+- **Ursache:** Das isolierte `.venv` (angelegt wegen gradio/starlette-Konflikt)
+  wurde nur mit `pip install -e ".[app]"` befüllt – torch/demucs gehören zum
+  `[neural]`-Extra und fehlten.
+- **Fix:** In `.venv` nachinstallieren:
+  `pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu128`
+  + `pip install demucs`. Verifiziert: torch 2.11+cu128, CUDA auf RTX 3060 aktiv.
+- **Lektion:** Nach Neuanlage des `.venv` IMMER `[neural]`-Deps prüfen
+  (`python -c "import torch, demucs"`), sonst schlägt die KI-Stufe still fehl.
+
 ### gradio-Slider-Regression (6.28.0) – `None` statt Zahl (17.09.)
 - **Symptom:** Beim *Process*-Klick crasht `preprocess_data` mit
   `TypeError: '<' not supported between instances of 'NoneType' and 'int'`
