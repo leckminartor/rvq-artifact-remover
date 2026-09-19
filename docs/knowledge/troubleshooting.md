@@ -77,18 +77,21 @@ Volltextsuche: `rg -i "begriff" docs/knowledge/troubleshooting.md`
 4. Bei CUDA-Problemen: FP32-Fallback greift automatisch; Device-Zeile in der App prüfen.
 
 ### gradio/starlette-Versionskonflikt beim App-Start (17.09.)
-- **Symptom:** `RuntimeError: Response content longer than Content-Length` beim
+- **Symptom:** `RuntimeError: Response content longer than Content-Length`
+  bzw. `h11 LocalProtocolError: Too much data for declared Content-Length` beim
   Laden der Seite (Traceback über `gradio/brotli_middleware.py` →
   `starlette/responses.py` → `uvicorn send`), noch bevor Verarbeitung läuft.
-- **Ursache:** `gradio 6.27.0` mit zu neuem `starlette 1.3.1` + `fastapi 0.133.1`
-  (Gradios Brotli-Middleware erweitert Starlettes GZipResponder, dessen
-  Content-Length-Handling sich in Starlette 1.3 geändert hat). Vermutlich hat
-  ein anderes Tool im gemeinsamen venv starlette hochgezogen.
-- **Fix:** Eigenes App-venv anlegen (`python -m venv .venv`), `pip install -e ".[app]"`
-  → installiert abgestimmte Kombination (gradio 6.28 + starlette 1.6 + fastapi
-  0.141). `Start RVQ Remover.bat` nutzt jetzt `.venv` (legt es bei Fehlen selbst an).
-- **Wichtig:** Die App teilt sich NICHT mehr das Agent-Tool-venv → Downgrades dort
-  beeinflussen die App nicht mehr.
+- **Ursache:** Gradios `BrotliMiddleware` ist mit dem installierten Starlette
+  inkompatibel: sie komprimiert, sendet aber mehr Bytes als die deklarierte
+  `Content-Length`. Tritt nur auf, wenn der Browser `Accept-Encoding: br` sendet
+  (mein erster Test ohne `br` war fehl-positiv grün!). Auch nach Wechsel ins
+  frische `.venv` (gradio 6.28/starlette 1.6) blieb der Fehler bestehen.
+- **Fix (v0.3.7):** `BrotliMiddleware` wird beim Import in `rvq_remover/app.py`
+  durch eine Pass-through-Middleware ersetzt → App serviert unkomprimiert
+  (für lokalen Einsatz völlig ok). Verifiziert mit `Accept-Encoding: gzip,
+  deflate, br` → HTTP 200.
+- **Lektion:** Beim Testen lokaler Gradio-Apps IMMER auch mit
+  `Accept-Encoding: br` abfragen, sonst übersieht man Kompressionspfad-Bugs.
 
 ### Gradio-Audio-Player-Reset (v0.3.2 / v0.3.3)
 - **Symptom:** Output-Player sprang nach einem weiteren Durchgang nicht auf 0:00,

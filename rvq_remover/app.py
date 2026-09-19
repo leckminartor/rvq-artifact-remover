@@ -12,6 +12,23 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
+# Gradio's BrotliMiddleware is incompatible with the installed starlette
+# (it sends more bytes than the declared Content-Length -> uvicorn/h11
+# "Too much data for declared Content-Length"). Serve uncompressed instead.
+try:
+    from gradio import routes as _gr_routes
+
+    class _Passthrough:
+        def __init__(self, app, **kwargs):
+            self._app = app
+
+        async def __call__(self, scope, receive, send):
+            await self._app(scope, receive, send)
+
+    _gr_routes.BrotliMiddleware = _Passthrough
+except Exception:
+    pass
+
 from . import __version__
 from .engine import analyze, detect_comb_freq, load_audio, process, save_audio
 

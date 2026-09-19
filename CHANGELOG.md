@@ -5,6 +5,17 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.7] - 2026-09-18
+
+### Fixed
+
+- App no longer crashes with `Too much data for declared Content-Length`
+  when the browser requests Brotli compression. Gradio's BrotliMiddleware
+  is incompatible with the installed starlette and sends more bytes than
+  the declared Content-Length. It is now replaced at runtime with a
+  pass-through middleware, so responses are served uncompressed (fine for
+  local use).
+
 ## [0.3.6] - 2026-09-18
 
 ### Fixed
